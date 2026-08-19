@@ -340,7 +340,6 @@ class DesktopPet(QWidget):
             pet_action.triggered.connect(lambda checked, k=pet_key: self.change_pet(k))
             pet_menu.addAction(pet_action)
             
-        # 📏 6단계 크기 프리셋 (24px ~ 128px, 기본 48px 디폴트!)
         size_menu = menu.addMenu("📏 펫 크기")
         size_options = [
             ("🔹 매우 작게 (24px)", 24),
@@ -386,10 +385,14 @@ class DesktopPet(QWidget):
         save_config(self.config)
         self.init_window_flags()
         self.show()
-        self.bring_to_front()
+        self.summon_to_mouse()
 
-    def bring_to_front(self):
+    def summon_to_mouse(self):
+        """✨ 펫을 내 마우스가 있는 위치로 순간이동 소환 및 맨 위로 노출"""
         self.show()
+        mouse_pos = QCursor.pos()
+        # 마우스 위치 근처로 펫 이동 (마우스 손가락 위치 고려 약간 보정)
+        self.move(mouse_pos.x() - (self.pet_width // 2), mouse_pos.y() - (self.pet_height // 2))
         self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
         self.raise_()
         self.activateWindow()
@@ -420,9 +423,10 @@ class DesktopPet(QWidget):
         tray_menu = QMenu()
         self.pets_registry = load_pets_registry()
         
-        bring_front_action = QAction("✨ 내 앞으로 불러오기", self)
-        bring_front_action.triggered.connect(self.bring_to_front)
-        tray_menu.addAction(bring_front_action)
+        # 📍 명확하고 유용한 소환 기능으로 개선!
+        summon_action = QAction("✨ 내 앞으로 불러오기 (마우스 위치로)", self)
+        summon_action.triggered.connect(self.summon_to_mouse)
+        tray_menu.addAction(summon_action)
         
         top_text = "📌 맨 위 고정 해제" if self.is_always_on_top else "📌 항상 위에 표시"
         toggle_top_action = QAction(top_text, self)
@@ -445,7 +449,7 @@ class DesktopPet(QWidget):
         tray_menu.addSeparator()
         
         show_action = QAction("🐾 펫 소환하기", self)
-        show_action.triggered.connect(self.bring_to_front)
+        show_action.triggered.connect(self.summon_to_mouse)
         tray_menu.addAction(show_action)
         
         hide_action = QAction("🙈 트레이로 숨기기", self)
