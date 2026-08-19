@@ -317,6 +317,25 @@ class DesktopPet(QWidget):
             self.update_pet_image()
             event.accept()
 
+    def _build_size_menu(self, parent_menu):
+        """공통 펫 크기 서브메뉴 빌더"""
+        size_menu = parent_menu.addMenu("📏 펫 크기")
+        size_options = [
+            ("🔹 매우 작게 (24px)", 24),
+            ("🔸 작게 (32px)", 32),
+            ("⭐️ 기본 (48px)", 48),
+            ("🔹 보통 (64px)", 64),
+            ("🔸 크게 (96px)", 96),
+            ("🌟 매우 크게 (128px)", 128)
+        ]
+        for label, sz in size_options:
+            act = QAction(label, self)
+            act.setCheckable(True)
+            if self.pet_width == sz:
+                act.setChecked(True)
+            act.triggered.connect(lambda checked, s=sz: self.change_size(s))
+            size_menu.addAction(act)
+
     # --- 우클릭 메뉴 ---
     def show_context_menu(self, global_pos):
         menu = QMenu(self)
@@ -340,23 +359,8 @@ class DesktopPet(QWidget):
             pet_action.triggered.connect(lambda checked, k=pet_key: self.change_pet(k))
             pet_menu.addAction(pet_action)
             
-        size_menu = menu.addMenu("📏 펫 크기")
-        size_options = [
-            ("🔹 매우 작게 (24px)", 24),
-            ("🔸 작게 (32px)", 32),
-            ("⭐️ 기본 (48px)", 48),
-            ("🔹 보통 (64px)", 64),
-            ("🔸 크게 (96px)", 96),
-            ("🌟 매우 크게 (128px)", 128)
-        ]
-        
-        for label, sz in size_options:
-            act = QAction(label, self)
-            act.setCheckable(True)
-            if self.pet_width == sz:
-                act.setChecked(True)
-            act.triggered.connect(lambda checked, s=sz: self.change_size(s))
-            size_menu.addAction(act)
+        # 📏 펫 크기 서브메뉴
+        self._build_size_menu(menu)
         
         menu.addSeparator()
         hide_action = QAction("🙈 숨기기 (트레이로)", self)
@@ -391,7 +395,6 @@ class DesktopPet(QWidget):
         """✨ 펫을 내 마우스가 있는 위치로 순간이동 소환 및 맨 위로 노출"""
         self.show()
         mouse_pos = QCursor.pos()
-        # 마우스 위치 근처로 펫 이동 (마우스 손가락 위치 고려 약간 보정)
         self.move(mouse_pos.x() - (self.pet_width // 2), mouse_pos.y() - (self.pet_height // 2))
         self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
         self.raise_()
@@ -408,6 +411,8 @@ class DesktopPet(QWidget):
         self.label.resize(size, size)
         self.load_and_cache_standard_assets()
         self.update_pet_image()
+        if hasattr(self, 'tray_icon'):
+            self.update_tray_menu()
 
     def init_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
@@ -423,7 +428,6 @@ class DesktopPet(QWidget):
         tray_menu = QMenu()
         self.pets_registry = load_pets_registry()
         
-        # 📍 명확하고 유용한 소환 기능으로 개선!
         summon_action = QAction("✨ 내 앞으로 불러오기 (마우스 위치로)", self)
         summon_action.triggered.connect(self.summon_to_mouse)
         tray_menu.addAction(summon_action)
@@ -433,6 +437,7 @@ class DesktopPet(QWidget):
         toggle_top_action.triggered.connect(self.toggle_always_on_top_from_tray)
         tray_menu.addAction(toggle_top_action)
         
+        # 🐾 펫 스킨 변경 서브메뉴
         pet_menu = tray_menu.addMenu("🐾 펫 스킨 변경")
         for pet_key, pet_info in self.pets_registry.items():
             if not pet_info.get("enabled", True):
@@ -445,6 +450,9 @@ class DesktopPet(QWidget):
                 pet_action.setChecked(True)
             pet_action.triggered.connect(lambda checked, k=pet_key: self.change_pet(k))
             pet_menu.addAction(pet_action)
+            
+        # 📏 트레이 아이콘 메뉴에도 펫 크기 서브메뉴 추가! (24px ~ 128px)
+        self._build_size_menu(tray_menu)
             
         tray_menu.addSeparator()
         
