@@ -55,21 +55,23 @@ class DesktopPet(QWidget):
         self.is_dragging = False
         self.drag_position = QPoint()
         self.direction = 1  # 1: 오른쪽, -1: 왼쪽
-        self.state = "WALK" # "WALK", "IDLE", "DRAG"
+        self.state = "WALK" # "WALK", "IDLE", "DRAG", "HAPPY", "SPECIAL"
         
         # 2. 창 투명화 및 무테두리 설정
         self.init_window_flags()
         
-        # 3. 프레임 이미지 캐싱
-        self.raw_frames = []
-        self.cached_right = []
-        self.cached_left = []
-        self.drag_frame_right = None
-        self.drag_frame_left = None
+        # 3. 표준 에셋 캐싱
+        self.anim_frames = {
+            "walk_r": [], "walk_l": [],
+            "idle_r": [], "idle_l": [],
+            "drag_r": None, "drag_l": None,
+            "happy_r": [], "happy_l": [],
+            "special_r": [], "special_l": []
+        }
         self.current_frame_idx = 0
-        self.load_and_cache_frames()
+        self.load_and_cache_standard_assets()
         
-        # 4. UI 구성 (픽셀 라벨 및 호버 커서/툴팁)
+        # 4. UI 구성
         self.label = QLabel(self)
         self.label.resize(self.pet_width, self.pet_height)
         self.update_pet_image()
@@ -94,7 +96,7 @@ class DesktopPet(QWidget):
         # 6. 시스템 트레이 아이콘
         self.init_tray_icon()
         
-        # 초기 위치 설정 (화면 우하단)
+        # 초기 위치 설정
         screen = QApplication.primaryScreen().geometry()
         self.move(screen.width() - 250, screen.height() - 150)
         self.show()
@@ -113,85 +115,103 @@ class DesktopPet(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
         self.resize(self.pet_width, self.pet_height)
 
-    def load_and_cache_frames(self):
-        """선택된 펫 폴더에서 걷기 프레임 및 잡힌(drag.png) 전용 프레임 로드"""
-        assets_dir = os.path.join(os.path.dirname(__file__), "assets", self.current_pet)
-        if not os.path.exists(assets_dir) or not os.listdir(assets_dir):
-            assets_dir = os.path.join(os.path.dirname(__file__), "assets", "cat_cheese")
+    def _load_folder_frames(self, folder_path):
+        """특정 폴더에서 이미지 파일들을 읽어 정방향/좌우반전 Pixmap 리스트로 반환"""
+        right_list, left_list = [], []
+        if os.path.exists(folder_path):
+            files = sorted([f for f in os.listdir(folder_path) if f.endswith((".png", ".jpg"))])
+            for f in files:
+                pix = QPixmap(os.path.join(folder_path, f))
+                if not pix.isNull():
+                    scaled_r = pix.scaled(
+                        self.pet_width, self.pet_height, 
+                        Qt.AspectRatioMode.KeepAspectRatio, 
+                        Qt.TransformationMode.FastTransformation
+                    )
+                    flipped = pix.transformed(QTransform().scale(-1, 1))
+                    scaled_l = flipped.scaled(
+                        self.pet_width, self.pet_height, 
+                        Qt.AspectRatioMode.KeepAspectRatio, 
+                        Qt.TransformationMode.FastTransformation
+                    )
+                    right_list.append(scaled_r)
+                    left_list.append(scaled_l)
+        return right_list, left_list
+
+    def load_and_cache_standard_assets(self):
+        """표준 규격 (walk, idle, drag, happy, special) 에셋 캐싱"""
+        pet_dir = os.path.join(os.path.dirname(__file__), "assets", self.current_pet)
+        if not os.path.exists(pet_dir):
+            pet_dir = os.path.join(os.path.dirname(__file__), "assets", "cat_cheese")
             
-        self.raw_frames = []
-        self.cached_right = []
-        self.cached_left = []
-        self.drag_frame_right = None
-        self.drag_frame_left = None
-        
-        # 1. 일반 프레임 (frame_*.png 또는 walk_*.png)
-        files = sorted([f for f in os.listdir(assets_dir) if f.startswith("frame_") or f.startswith("walk_")])
-        for file in files:
-            pix = QPixmap(os.path.join(assets_dir, file))
-            if not pix.isNull():
-                self.raw_frames.append(pix)
-                
-        if not self.raw_frames:
+        # (1) walk (또는 루트 폴더의 frame_ / walk_ 파일)
+        walk_dir = os.path.join(pet_dir, "walk")
+        w_r, w_l = self._load_folder_frames(walk_dir)
+        if not w_r:  # 하위 호환: 루트 폴더에서 검색
+            w_r, w_l = self._load_folder_frames(pet_dir)
+            
+        if not w_r:
             fallback = QPixmap(64, 64)
             fallback.fill(Qt.GlobalColor.transparent)
-            self.raw_frames = [fallback]
+            w_r, w_l = [fallback], [fallback]
             
-        for pix in self.raw_frames:
-            scaled_r = pix.scaled(
-                self.pet_width, 
-                self.pet_height, 
-                Qt.AspectRatioMode.KeepAspectRatio, 
-                Qt.TransformationMode.FastTransformation
-            )
-            self.cached_right.append(scaled_r)
-            
-            flipped = pix.transformed(QTransform().scale(-1, 1))
-            scaled_l = flipped.scaled(
-                self.pet_width, 
-                self.pet_height, 
-                Qt.AspectRatioMode.KeepAspectRatio, 
-                Qt.TransformationMode.FastTransformation
-            )
-            self.cached_left.append(scaled_l)
-            
-        # 2. 뒷목 잡힌 전용 이미지 (drag.png)
-        drag_path = os.path.join(assets_dir, "drag.png")
-        if os.path.exists(drag_path):
-            drag_pix = QPixmap(drag_path)
-            if not drag_pix.isNull():
-                self.drag_frame_right = drag_pix.scaled(
-                    self.pet_width, 
-                    self.pet_height, 
-                    Qt.AspectRatioMode.KeepAspectRatio, 
-                    Qt.TransformationMode.FastTransformation
-                )
-                drag_flipped = drag_pix.transformed(QTransform().scale(-1, 1))
-                self.drag_frame_left = drag_flipped.scaled(
-                    self.pet_width, 
-                    self.pet_height, 
-                    Qt.AspectRatioMode.KeepAspectRatio, 
-                    Qt.TransformationMode.FastTransformation
-                )
+        self.anim_frames["walk_r"], self.anim_frames["walk_l"] = w_r, w_l
+        
+        # (2) idle (정면 멍때리기)
+        idle_dir = os.path.join(pet_dir, "idle")
+        i_r, i_l = self._load_folder_frames(idle_dir)
+        self.anim_frames["idle_r"] = i_r if i_r else w_r
+        self.anim_frames["idle_l"] = i_l if i_l else w_l
+        
+        # (3) drag (뒷목 잡힘)
+        drag_dir = os.path.join(pet_dir, "drag")
+        d_r, d_l = self._load_folder_frames(drag_dir)
+        if d_r:
+            self.anim_frames["drag_r"], self.anim_frames["drag_l"] = d_r[0], d_l[0]
+        else:
+            # 루트의 drag.png 검사
+            drag_file = os.path.join(pet_dir, "drag.png")
+            if os.path.exists(drag_file):
+                pix = QPixmap(drag_file)
+                if not pix.isNull():
+                    scaled_r = pix.scaled(self.pet_width, self.pet_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+                    scaled_l = pix.transformed(QTransform().scale(-1, 1)).scaled(self.pet_width, self.pet_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+                    self.anim_frames["drag_r"], self.anim_frames["drag_l"] = scaled_r, scaled_l
+            if not self.anim_frames["drag_r"]:
+                self.anim_frames["drag_r"], self.anim_frames["drag_l"] = w_r[0], w_l[0]
+
+        # (4) happy
+        happy_dir = os.path.join(pet_dir, "happy")
+        h_r, h_l = self._load_folder_frames(happy_dir)
+        self.anim_frames["happy_r"] = h_r if h_r else w_r
+        self.anim_frames["happy_l"] = h_l if h_l else w_l
+
+        # (5) special
+        special_dir = os.path.join(pet_dir, "special")
+        s_r, s_l = self._load_folder_frames(special_dir)
+        self.anim_frames["special_r"] = s_r if s_r else w_r
+        self.anim_frames["special_l"] = s_l if s_l else w_l
 
     def update_pet_image(self):
-        if not self.cached_right:
-            return
-            
-        # 🐾 마우스로 잡혀있는 중(is_dragging)일 때는 뒷목 잡힌 전용 프레임(drag.png) 표시!
-        if self.is_dragging and self.drag_frame_right:
-            pix = self.drag_frame_right if self.direction == 1 else self.drag_frame_left
+        if self.is_dragging:
+            pix = self.anim_frames["drag_r"] if self.direction == 1 else self.anim_frames["drag_l"]
             self.label.setPixmap(pix)
             return
             
-        idx = self.current_frame_idx % len(self.cached_right)
-        if self.direction == 1:
-            self.label.setPixmap(self.cached_right[idx])
-        else:
-            self.label.setPixmap(self.cached_left[idx])
+        current_list = self.anim_frames["walk_r"] if self.direction == 1 else self.anim_frames["walk_l"]
+        if self.state == "IDLE":
+            current_list = self.anim_frames["idle_r"] if self.direction == 1 else self.anim_frames["idle_l"]
+        elif self.state == "HAPPY":
+            current_list = self.anim_frames["happy_r"] if self.direction == 1 else self.anim_frames["happy_l"]
+        elif self.state == "SPECIAL":
+            current_list = self.anim_frames["special_r"] if self.direction == 1 else self.anim_frames["special_l"]
+
+        if current_list:
+            idx = self.current_frame_idx % len(current_list)
+            self.label.setPixmap(current_list[idx])
 
     def update_movement(self):
-        if self.is_dragging or self.state == "IDLE" or self.state == "DRAG":
+        if self.is_dragging or self.state in ["IDLE", "DRAG", "SPECIAL"]:
             return
             
         current_pos = self.pos()
@@ -214,21 +234,30 @@ class DesktopPet(QWidget):
             self.update_pet_image()
             return
 
+        current_list = self.anim_frames["walk_r"]
         if self.state == "IDLE":
-            self.current_frame_idx = 0
-        else:
-            if self.cached_right:
-                self.current_frame_idx = (self.current_frame_idx + 1) % len(self.cached_right)
-                
+            current_list = self.anim_frames["idle_r"]
+        elif self.state == "HAPPY":
+            current_list = self.anim_frames["happy_r"]
+        elif self.state == "SPECIAL":
+            current_list = self.anim_frames["special_r"]
+
+        if current_list:
+            self.current_frame_idx = (self.current_frame_idx + 1) % len(current_list)
+            
         self.update_pet_image()
 
     def update_behavior_state(self):
         if self.is_dragging:
             return
             
-        if random.random() < 0.3:
+        rand = random.random()
+        if rand < 0.25:
             self.state = "IDLE"
             QTimer.singleShot(random.randint(3000, 5000), self.resume_walking)
+        elif rand < 0.35 and self.anim_frames["special_r"]:
+            self.state = "SPECIAL"
+            QTimer.singleShot(random.randint(4000, 6000), self.resume_walking)
         else:
             self.state = "WALK"
             if random.random() < 0.4:
@@ -309,11 +338,11 @@ class DesktopPet(QWidget):
         self.current_pet = pet_key
         self.config["current_pet"] = pet_key
         save_config(self.config)
-        self.load_and_cache_frames()
+        self.load_and_cache_standard_assets()
         self.update_pet_image()
         self.update_tooltip()
-        if hasattr(self, 'tray_icon'):
-            self.tray_icon.setIcon(QIcon(self.raw_frames[0]))
+        if hasattr(self, 'tray_icon') and self.anim_frames["walk_r"]:
+            self.tray_icon.setIcon(QIcon(self.anim_frames["walk_r"][0]))
 
     def toggle_always_on_top(self):
         self.is_always_on_top = not self.is_always_on_top
@@ -338,13 +367,13 @@ class DesktopPet(QWidget):
         
         self.resize(size, size)
         self.label.resize(size, size)
-        self.load_and_cache_frames()
+        self.load_and_cache_standard_assets()
         self.update_pet_image()
 
     def init_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
-        if self.raw_frames:
-            self.tray_icon.setIcon(QIcon(self.raw_frames[0]))
+        if self.anim_frames["walk_r"]:
+            self.tray_icon.setIcon(QIcon(self.anim_frames["walk_r"][0]))
         else:
             self.tray_icon.setIcon(self.style().standardIcon(self.style().StandardPixmap.SP_ComputerIcon))
             
