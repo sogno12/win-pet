@@ -7,6 +7,7 @@ from PyQt6.QtGui import QPixmap, QAction, QIcon, QTransform, QCursor
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QMenu, QSystemTrayIcon
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
+PETS_REGISTRY_PATH = os.path.join(os.path.dirname(__file__), "pets.json")
 
 DEFAULT_CONFIG = {
     "current_pet": "cat_cheese",
@@ -17,27 +18,42 @@ DEFAULT_CONFIG = {
     "anim_interval_ms": 140
 }
 
-# 기본 펫 이름 맵핑
-PET_NAME_MAP = {
-    "cat_cheese": "🧀 치즈태비 고양이",
-    "owl_white": "🦉 헤드위그 하얀 부엉이",
-    "tiger": "🐯 아기 호랑이",
-    "penguin": "🐧 핑구 펭귄"
+DEFAULT_PETS = {
+    "cat_cheese": {"name": "🧀 치즈태비 고양이", "enabled": True},
+    "owl_white": {"name": "🦉 헤드위그 하얀 부엉이", "enabled": True}
 }
 
-def scan_available_pets():
-    """assets/ 폴더를 스캔하여 존재하는 모든 펫 스킨 리스트 자동 반환"""
+def load_pets_registry():
+    """pets.json 메타데이터 레지스트리를 읽고, assets/ 폴더를 스캔하여 신규 펫 자동 동기화"""
+    pets_data = DEFAULT_PETS.copy()
+    if os.path.exists(PETS_REGISTRY_PATH):
+        try:
+            with open(PETS_REGISTRY_PATH, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+                pets_data.update(loaded)
+        except Exception as e:
+            print(f"⚠️ pets.json 로드 실패: {e}")
+
+    # assets/ 스캔하여 새로 발견된 폴더 자동 등록
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
-    available = {}
     if os.path.exists(assets_dir):
         for item in os.listdir(assets_dir):
             item_path = os.path.join(assets_dir, item)
-            if os.path.isdir(item_path):
-                display_name = PET_NAME_MAP.get(item, f"🐾 {item}")
-                available[item] = display_name
-    if not available:
-        available["cat_cheese"] = "🧀 치즈태비 고양이"
-    return available
+            if os.path.isdir(item_path) and item not in pets_data:
+                pets_data[item] = {
+                    "name": f"🐾 {item}",
+                    "enabled": True
+                }
+                
+    save_pets_registry(pets_data)
+    return pets_data
+
+def save_pets_registry(pets_data):
+    try:
+        with open(PETS_REGISTRY_PATH, "w", encoding="utf-8") as f:
+            json.dump(pets_data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"❌ pets.json 저장 실패: {e}")
 
 def load_config():
     if os.path.exists(CONFIG_PATH):
@@ -60,13 +76,13 @@ class DesktopPet(QWidget):
     def __init__(self):
         super().__init__()
         
-        # 1. config.json 로드
+        # 1. config 및 pets 레지스트리 로드
         self.config = load_config()
-        self.available_pets = scan_available_pets()
+        self.pets_registry = load_pets_registry()
         
         self.current_pet = self.config.get("current_pet", "cat_cheese")
-        if self.current_pet not in self.available_pets:
-            self.current_pet = list(self.available_pets.keys())[0]
+        if self.current_pet not in self.pets_registry:
+            self.current_pet = "cat_cheese"
             
         self.pet_width = self.config.get("pet_width", 80)
         self.pet_height = self.config.get("pet_height", 80)
@@ -124,7 +140,8 @@ class DesktopPet(QWidget):
         self.show()
 
     def update_tooltip(self):
-        pet_name = self.available_pets.get(self.current_pet, self.current_pet)
+        pet_info = self.pets_registry.get(self.current_pet, {})
+        pet_name = pet_info.get("name", self.current_pet)
         self.setToolTip(f"[{pet_name}] 🐾 우클릭: 메뉴 | 좌클릭: 잡아서 이동")
 
     def init_window_flags(self):
@@ -313,16 +330,20 @@ class DesktopPet(QWidget):
     # --- 우클릭 메뉴 ---
     def show_context_menu(self, global_pos):
         menu = QMenu(self)
-        self.available_pets = scan_available_pets()
+        self.pets_registry = load_pets_registry()
         
         top_text = "📌 맨 위 고정 해제" if self.is_always_on_top else "📌 항상 위에 표시"
         toggle_top_action = QAction(top_text, self)
         toggle_top_action.triggered.connect(self.toggle_always_on_top)
         menu.addAction(toggle_top_action)
         
-        # 동적 펫 스킨 목록
+        # 🐾 enabled: true 인 펫만 노출
         pet_menu = menu.addMenu("🐾 펫 스킨 변경")
-        for pet_key, pet_name in self.available_pets.items():
+        for pet_key, pet_info in self.pets_registry.items():
+            if not pet_info.get("enabled", True):
+                continue  # 비활성화(enabled: false) 상태면 메뉴에서 노출 안 함
+                
+            pet_name = pet_info.get("name", pet_key)
             pet_action = QAction(pet_name, self)
             pet_action.setCheckable(True)
             if self.current_pet == pet_key:
@@ -330,15 +351,19 @@ class DesktopPet(QWidget):
             pet_action.triggered.connect(lambda checked, k=pet_key: self.change_pet(k))
             pet_menu.addAction(pet_action)
             
+        # 📏 크기 변경 메뉴 (매우 작게 32px 신규 추가!)
         size_menu = menu.addMenu("📏 펫 크기")
+        tiny_action = QAction("🔹 매우 작게 (32px)", self)
         small_action = QAction("작게 (48px)", self)
         medium_action = QAction("보통 (80px)", self)
         large_action = QAction("크게 (120px)", self)
         
+        tiny_action.triggered.connect(lambda: self.change_size(32))
         small_action.triggered.connect(lambda: self.change_size(48))
         medium_action.triggered.connect(lambda: self.change_size(80))
         large_action.triggered.connect(lambda: self.change_size(120))
         
+        size_menu.addAction(tiny_action)
         size_menu.addAction(small_action)
         size_menu.addAction(medium_action)
         size_menu.addAction(large_action)
@@ -402,7 +427,7 @@ class DesktopPet(QWidget):
 
     def update_tray_menu(self):
         tray_menu = QMenu()
-        self.available_pets = scan_available_pets()
+        self.pets_registry = load_pets_registry()
         
         bring_front_action = QAction("✨ 내 앞으로 불러오기", self)
         bring_front_action.triggered.connect(self.bring_to_front)
@@ -414,7 +439,11 @@ class DesktopPet(QWidget):
         tray_menu.addAction(toggle_top_action)
         
         pet_menu = tray_menu.addMenu("🐾 펫 스킨 변경")
-        for pet_key, pet_name in self.available_pets.items():
+        for pet_key, pet_info in self.pets_registry.items():
+            if not pet_info.get("enabled", True):
+                continue
+                
+            pet_name = pet_info.get("name", pet_key)
             pet_action = QAction(pet_name, self)
             pet_action.setCheckable(True)
             if self.current_pet == pet_key:

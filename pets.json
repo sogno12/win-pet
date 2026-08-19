@@ -1,0 +1,10 @@
+{
+  "cat_cheese": {
+    "name": "🧀 치즈태비 고양이",
+    "enabled": true
+  },
+  "owl_white": {
+    "name": "🦉 헤드위그 하얀 부엉이",
+    "enabled": true
+  }
+}
