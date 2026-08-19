@@ -17,10 +17,27 @@ DEFAULT_CONFIG = {
     "anim_interval_ms": 140
 }
 
-PET_TYPES = {
+# 기본 펫 이름 맵핑
+PET_NAME_MAP = {
     "cat_cheese": "🧀 치즈태비 고양이",
-    "owl_white": "🦉 헤드위그 하얀 부엉이"
+    "owl_white": "🦉 헤드위그 하얀 부엉이",
+    "tiger": "🐯 아기 호랑이",
+    "penguin": "🐧 핑구 펭귄"
 }
+
+def scan_available_pets():
+    """assets/ 폴더를 스캔하여 존재하는 모든 펫 스킨 리스트 자동 반환"""
+    assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+    available = {}
+    if os.path.exists(assets_dir):
+        for item in os.listdir(assets_dir):
+            item_path = os.path.join(assets_dir, item)
+            if os.path.isdir(item_path):
+                display_name = PET_NAME_MAP.get(item, f"🐾 {item}")
+                available[item] = display_name
+    if not available:
+        available["cat_cheese"] = "🧀 치즈태비 고양이"
+    return available
 
 def load_config():
     if os.path.exists(CONFIG_PATH):
@@ -45,7 +62,12 @@ class DesktopPet(QWidget):
         
         # 1. config.json 로드
         self.config = load_config()
+        self.available_pets = scan_available_pets()
+        
         self.current_pet = self.config.get("current_pet", "cat_cheese")
+        if self.current_pet not in self.available_pets:
+            self.current_pet = list(self.available_pets.keys())[0]
+            
         self.pet_width = self.config.get("pet_width", 80)
         self.pet_height = self.config.get("pet_height", 80)
         self.is_always_on_top = self.config.get("is_always_on_top", True)
@@ -102,7 +124,7 @@ class DesktopPet(QWidget):
         self.show()
 
     def update_tooltip(self):
-        pet_name = PET_TYPES.get(self.current_pet, "펫")
+        pet_name = self.available_pets.get(self.current_pet, self.current_pet)
         self.setToolTip(f"[{pet_name}] 🐾 우클릭: 메뉴 | 좌클릭: 잡아서 이동")
 
     def init_window_flags(self):
@@ -116,7 +138,6 @@ class DesktopPet(QWidget):
         self.resize(self.pet_width, self.pet_height)
 
     def _load_folder_frames(self, folder_path):
-        """특정 폴더에서 이미지 파일들을 읽어 정방향/좌우반전 Pixmap 리스트로 반환"""
         right_list, left_list = [], []
         if os.path.exists(folder_path):
             files = sorted([f for f in os.listdir(folder_path) if f.endswith((".png", ".jpg"))])
@@ -139,15 +160,14 @@ class DesktopPet(QWidget):
         return right_list, left_list
 
     def load_and_cache_standard_assets(self):
-        """표준 규격 (walk, idle, drag, happy, special) 에셋 캐싱"""
         pet_dir = os.path.join(os.path.dirname(__file__), "assets", self.current_pet)
         if not os.path.exists(pet_dir):
             pet_dir = os.path.join(os.path.dirname(__file__), "assets", "cat_cheese")
             
-        # (1) walk (또는 루트 폴더의 frame_ / walk_ 파일)
+        # (1) walk
         walk_dir = os.path.join(pet_dir, "walk")
         w_r, w_l = self._load_folder_frames(walk_dir)
-        if not w_r:  # 하위 호환: 루트 폴더에서 검색
+        if not w_r:
             w_r, w_l = self._load_folder_frames(pet_dir)
             
         if not w_r:
@@ -157,19 +177,18 @@ class DesktopPet(QWidget):
             
         self.anim_frames["walk_r"], self.anim_frames["walk_l"] = w_r, w_l
         
-        # (2) idle (정면 멍때리기)
+        # (2) idle
         idle_dir = os.path.join(pet_dir, "idle")
         i_r, i_l = self._load_folder_frames(idle_dir)
         self.anim_frames["idle_r"] = i_r if i_r else w_r
         self.anim_frames["idle_l"] = i_l if i_l else w_l
         
-        # (3) drag (뒷목 잡힘)
+        # (3) drag
         drag_dir = os.path.join(pet_dir, "drag")
         d_r, d_l = self._load_folder_frames(drag_dir)
         if d_r:
             self.anim_frames["drag_r"], self.anim_frames["drag_l"] = d_r[0], d_l[0]
         else:
-            # 루트의 drag.png 검사
             drag_file = os.path.join(pet_dir, "drag.png")
             if os.path.exists(drag_file):
                 pix = QPixmap(drag_file)
@@ -267,7 +286,6 @@ class DesktopPet(QWidget):
         if not self.is_dragging:
             self.state = "WALK"
 
-    # --- 마우스 이벤트 ---
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = True
@@ -295,14 +313,16 @@ class DesktopPet(QWidget):
     # --- 우클릭 메뉴 ---
     def show_context_menu(self, global_pos):
         menu = QMenu(self)
+        self.available_pets = scan_available_pets()
         
         top_text = "📌 맨 위 고정 해제" if self.is_always_on_top else "📌 항상 위에 표시"
         toggle_top_action = QAction(top_text, self)
         toggle_top_action.triggered.connect(self.toggle_always_on_top)
         menu.addAction(toggle_top_action)
         
+        # 동적 펫 스킨 목록
         pet_menu = menu.addMenu("🐾 펫 스킨 변경")
-        for pet_key, pet_name in PET_TYPES.items():
+        for pet_key, pet_name in self.available_pets.items():
             pet_action = QAction(pet_name, self)
             pet_action.setCheckable(True)
             if self.current_pet == pet_key:
@@ -382,6 +402,7 @@ class DesktopPet(QWidget):
 
     def update_tray_menu(self):
         tray_menu = QMenu()
+        self.available_pets = scan_available_pets()
         
         bring_front_action = QAction("✨ 내 앞으로 불러오기", self)
         bring_front_action.triggered.connect(self.bring_to_front)
@@ -393,7 +414,7 @@ class DesktopPet(QWidget):
         tray_menu.addAction(toggle_top_action)
         
         pet_menu = tray_menu.addMenu("🐾 펫 스킨 변경")
-        for pet_key, pet_name in PET_TYPES.items():
+        for pet_key, pet_name in self.available_pets.items():
             pet_action = QAction(pet_name, self)
             pet_action.setCheckable(True)
             if self.current_pet == pet_key:
