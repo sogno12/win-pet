@@ -22,6 +22,9 @@ pip install PyQt6 Pillow requests
 가상환경 활성화 상태에서 실행합니다:
 
 ```bash
+# 최초 1회 픽셀 에셋 전처리 준비
+python setup_assets.py
+
 # 바탕화면 픽셀 펫 실행
 python main.py
 ```
@@ -66,8 +69,10 @@ python main.py
 
 ## 📁 프로젝트 구조
 - `main.py`: 바탕화면 픽셀 펫 실행 메인 스크립트 (PyQt6 다중 스킨/FSM 구동)
+- `setup_assets.py`: 펫 픽셀 에셋 전처리 총괄 통합 준비 스크립트
 - `pet_generator.py`: 범용 펫 스킨 자동 폴더 생성 유틸리티
 - `pixelator.py`: 일반 이미지를 픽셀 아트로 픽셀화 변환해주는 유틸리티
 - `config.json`: 펫 스킨, 크기, 항상 위 옵션 영구 보관용 설정 파일
+- `pets.json`: 펫 메타데이터 및 메뉴 노출 제어용 레지스트리 파일
 - `assets/`: 펫 픽셀 아트 애니메이션 저장소 (`cat_cheese/`, `owl_white/`, `tiger/` 등)
 - `GEMINI.md`: 프로젝트 개발 로드맵 및 메모
