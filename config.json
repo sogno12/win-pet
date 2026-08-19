@@ -1,4 +1,5 @@
 {
+  "current_pet": "owl_white",
   "pet_width": 80,
   "pet_height": 80,
   "is_always_on_top": true,

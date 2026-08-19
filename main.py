@@ -9,11 +9,17 @@ from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QMenu, QSystemTrayIco
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 
 DEFAULT_CONFIG = {
+    "current_pet": "cat_cheese",
     "pet_width": 80,
     "pet_height": 80,
     "is_always_on_top": True,
     "move_speed": 1,
     "anim_interval_ms": 140
+}
+
+PET_TYPES = {
+    "cat_cheese": "🧀 치즈태비 고양이",
+    "owl_white": "🦉 헤드위그 하얀 부엉이"
 }
 
 def load_config():
@@ -39,6 +45,7 @@ class DesktopPet(QWidget):
         
         # 1. config.json 로드
         self.config = load_config()
+        self.current_pet = self.config.get("current_pet", "cat_cheese")
         self.pet_width = self.config.get("pet_width", 80)
         self.pet_height = self.config.get("pet_height", 80)
         self.is_always_on_top = self.config.get("is_always_on_top", True)
@@ -48,7 +55,7 @@ class DesktopPet(QWidget):
         self.is_dragging = False
         self.drag_position = QPoint()
         self.direction = 1  # 1: 오른쪽, -1: 왼쪽
-        self.state = "WALK" # "WALK", "IDLE"
+        self.state = "WALK" # "WALK", "IDLE", "DRAG"
         
         # 2. 창 투명화 및 무테두리 설정
         self.init_window_flags()
@@ -57,6 +64,8 @@ class DesktopPet(QWidget):
         self.raw_frames = []
         self.cached_right = []
         self.cached_left = []
+        self.drag_frame_right = None
+        self.drag_frame_left = None
         self.current_frame_idx = 0
         self.load_and_cache_frames()
         
@@ -67,7 +76,7 @@ class DesktopPet(QWidget):
         
         # 호버 커서 & 툴팁
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.setToolTip("🐾 우클릭: 설정 메뉴 | 좌클릭: 드래그 이동")
+        self.update_tooltip()
         
         # 5. 독립된 타이머 세팅
         self.move_timer = QTimer(self)
@@ -90,8 +99,11 @@ class DesktopPet(QWidget):
         self.move(screen.width() - 250, screen.height() - 150)
         self.show()
 
+    def update_tooltip(self):
+        pet_name = PET_TYPES.get(self.current_pet, "펫")
+        self.setToolTip(f"[{pet_name}] 🐾 우클릭: 메뉴 | 좌클릭: 잡아서 이동")
+
     def init_window_flags(self):
-        """윈도우 투명화, 무테두리, 항상 위 설정"""
         flags = Qt.WindowType.FramelessWindowHint | Qt.WindowType.SubWindow
         if self.is_always_on_top:
             flags |= Qt.WindowType.WindowStaysOnTopHint
@@ -102,19 +114,24 @@ class DesktopPet(QWidget):
         self.resize(self.pet_width, self.pet_height)
 
     def load_and_cache_frames(self):
-        """assets/cat/ 프레임을 정방향(우) 및 역방향(좌)으로 사전 캐싱"""
-        assets_dir = os.path.join(os.path.dirname(__file__), "assets", "cat")
+        """선택된 펫 폴더에서 걷기 프레임 및 잡힌(drag.png) 전용 프레임 로드"""
+        assets_dir = os.path.join(os.path.dirname(__file__), "assets", self.current_pet)
+        if not os.path.exists(assets_dir) or not os.listdir(assets_dir):
+            assets_dir = os.path.join(os.path.dirname(__file__), "assets", "cat_cheese")
+            
         self.raw_frames = []
         self.cached_right = []
         self.cached_left = []
+        self.drag_frame_right = None
+        self.drag_frame_left = None
         
-        if os.path.exists(assets_dir):
-            files = sorted([f for f in os.listdir(assets_dir) if f.endswith((".png", ".jpg"))])
-            for file in files:
-                pix = QPixmap(os.path.join(assets_dir, file))
-                if not pix.isNull():
-                    self.raw_frames.append(pix)
-                    
+        # 1. 일반 프레임 (frame_*.png 또는 walk_*.png)
+        files = sorted([f for f in os.listdir(assets_dir) if f.startswith("frame_") or f.startswith("walk_")])
+        for file in files:
+            pix = QPixmap(os.path.join(assets_dir, file))
+            if not pix.isNull():
+                self.raw_frames.append(pix)
+                
         if not self.raw_frames:
             fallback = QPixmap(64, 64)
             fallback.fill(Qt.GlobalColor.transparent)
@@ -137,9 +154,34 @@ class DesktopPet(QWidget):
                 Qt.TransformationMode.FastTransformation
             )
             self.cached_left.append(scaled_l)
+            
+        # 2. 뒷목 잡힌 전용 이미지 (drag.png)
+        drag_path = os.path.join(assets_dir, "drag.png")
+        if os.path.exists(drag_path):
+            drag_pix = QPixmap(drag_path)
+            if not drag_pix.isNull():
+                self.drag_frame_right = drag_pix.scaled(
+                    self.pet_width, 
+                    self.pet_height, 
+                    Qt.AspectRatioMode.KeepAspectRatio, 
+                    Qt.TransformationMode.FastTransformation
+                )
+                drag_flipped = drag_pix.transformed(QTransform().scale(-1, 1))
+                self.drag_frame_left = drag_flipped.scaled(
+                    self.pet_width, 
+                    self.pet_height, 
+                    Qt.AspectRatioMode.KeepAspectRatio, 
+                    Qt.TransformationMode.FastTransformation
+                )
 
     def update_pet_image(self):
         if not self.cached_right:
+            return
+            
+        # 🐾 마우스로 잡혀있는 중(is_dragging)일 때는 뒷목 잡힌 전용 프레임(drag.png) 표시!
+        if self.is_dragging and self.drag_frame_right:
+            pix = self.drag_frame_right if self.direction == 1 else self.drag_frame_left
+            self.label.setPixmap(pix)
             return
             
         idx = self.current_frame_idx % len(self.cached_right)
@@ -149,7 +191,7 @@ class DesktopPet(QWidget):
             self.label.setPixmap(self.cached_left[idx])
 
     def update_movement(self):
-        if self.is_dragging or self.state == "IDLE":
+        if self.is_dragging or self.state == "IDLE" or self.state == "DRAG":
             return
             
         current_pos = self.pos()
@@ -168,6 +210,10 @@ class DesktopPet(QWidget):
         self.move(new_x, current_pos.y())
 
     def update_animation(self):
+        if self.is_dragging or self.state == "DRAG":
+            self.update_pet_image()
+            return
+
         if self.state == "IDLE":
             self.current_frame_idx = 0
         else:
@@ -196,8 +242,10 @@ class DesktopPet(QWidget):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = True
+            self.state = "DRAG"
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             self.setCursor(QCursor(Qt.CursorShape.ClosedHandCursor))
+            self.update_pet_image()
             event.accept()
         elif event.button() == Qt.MouseButton.RightButton:
             self.show_context_menu(event.globalPosition().toPoint())
@@ -210,10 +258,12 @@ class DesktopPet(QWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = False
+            self.state = "WALK"
             self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            self.update_pet_image()
             event.accept()
 
-    # --- 펫 자체 우클릭 컨텍스트 메뉴 ---
+    # --- 우클릭 메뉴 ---
     def show_context_menu(self, global_pos):
         menu = QMenu(self)
         
@@ -222,6 +272,15 @@ class DesktopPet(QWidget):
         toggle_top_action.triggered.connect(self.toggle_always_on_top)
         menu.addAction(toggle_top_action)
         
+        pet_menu = menu.addMenu("🐾 펫 스킨 변경")
+        for pet_key, pet_name in PET_TYPES.items():
+            pet_action = QAction(pet_name, self)
+            pet_action.setCheckable(True)
+            if self.current_pet == pet_key:
+                pet_action.setChecked(True)
+            pet_action.triggered.connect(lambda checked, k=pet_key: self.change_pet(k))
+            pet_menu.addAction(pet_action)
+            
         size_menu = menu.addMenu("📏 펫 크기")
         small_action = QAction("작게 (48px)", self)
         medium_action = QAction("보통 (80px)", self)
@@ -246,6 +305,16 @@ class DesktopPet(QWidget):
         
         menu.exec(global_pos)
 
+    def change_pet(self, pet_key):
+        self.current_pet = pet_key
+        self.config["current_pet"] = pet_key
+        save_config(self.config)
+        self.load_and_cache_frames()
+        self.update_pet_image()
+        self.update_tooltip()
+        if hasattr(self, 'tray_icon'):
+            self.tray_icon.setIcon(QIcon(self.raw_frames[0]))
+
     def toggle_always_on_top(self):
         self.is_always_on_top = not self.is_always_on_top
         self.config["is_always_on_top"] = self.is_always_on_top
@@ -255,7 +324,6 @@ class DesktopPet(QWidget):
         self.bring_to_front()
 
     def bring_to_front(self):
-        """펫을 현재 모든 화면의 맨 앞으로 즉시 끌어올려 노출"""
         self.show()
         self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
         self.raise_()
@@ -273,7 +341,6 @@ class DesktopPet(QWidget):
         self.load_and_cache_frames()
         self.update_pet_image()
 
-    # --- 트레이 아이콘 & 우클릭 메뉴 ---
     def init_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
         if self.raw_frames:
@@ -285,24 +352,29 @@ class DesktopPet(QWidget):
         self.tray_icon.show()
 
     def update_tray_menu(self):
-        """트레이 우클릭 메뉴 동적 생성"""
         tray_menu = QMenu()
         
-        # 1. 펫을 내 앞으로 가져오기 (Bring to Front)
         bring_front_action = QAction("✨ 내 앞으로 불러오기", self)
         bring_front_action.triggered.connect(self.bring_to_front)
         tray_menu.addAction(bring_front_action)
         
-        # 2. 항상 위에 표시 토글
-        top_text = "📌 맨 위 고정 해제" if self.is_always_on_top else "📌 항상 위에 표시 (Always on Top)"
+        top_text = "📌 맨 위 고정 해제" if self.is_always_on_top else "📌 항상 위에 표시"
         toggle_top_action = QAction(top_text, self)
         toggle_top_action.triggered.connect(self.toggle_always_on_top_from_tray)
         tray_menu.addAction(toggle_top_action)
         
+        pet_menu = tray_menu.addMenu("🐾 펫 스킨 변경")
+        for pet_key, pet_name in PET_TYPES.items():
+            pet_action = QAction(pet_name, self)
+            pet_action.setCheckable(True)
+            if self.current_pet == pet_key:
+                pet_action.setChecked(True)
+            pet_action.triggered.connect(lambda checked, k=pet_key: self.change_pet(k))
+            pet_menu.addAction(pet_action)
+            
         tray_menu.addSeparator()
         
-        # 3. 소환하기 / 숨기기
-        show_action = QAction("🐾 펫 소환하기 / 보이기", self)
+        show_action = QAction("🐾 펫 소환하기", self)
         show_action.triggered.connect(self.bring_to_front)
         tray_menu.addAction(show_action)
         
@@ -312,7 +384,6 @@ class DesktopPet(QWidget):
         
         tray_menu.addSeparator()
         
-        # 4. 종료
         exit_action = QAction("❌ 종료", self)
         exit_action.triggered.connect(QApplication.instance().quit)
         tray_menu.addAction(exit_action)
