@@ -3,7 +3,7 @@ import os
 import json
 import random
 from PyQt6.QtCore import Qt, QTimer, QPoint
-from PyQt6.QtGui import QPixmap, QAction, QIcon, QTransform, QCursor
+from PyQt6.QtGui import QPixmap, QAction, QActionGroup, QIcon, QTransform, QCursor
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QMenu, QSystemTrayIcon
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
@@ -318,8 +318,10 @@ class DesktopPet(QWidget):
             event.accept()
 
     def _build_size_menu(self, parent_menu):
-        """공통 펫 크기 서브메뉴 빌더"""
         size_menu = parent_menu.addMenu("📏 펫 크기")
+        size_group = QActionGroup(self)
+        size_group.setExclusive(True)
+        
         size_options = [
             ("🔹 매우 작게 (24px)", 24),
             ("🔸 작게 (32px)", 32),
@@ -334,7 +336,27 @@ class DesktopPet(QWidget):
             if self.pet_width == sz:
                 act.setChecked(True)
             act.triggered.connect(lambda checked, s=sz: self.change_size(s))
+            size_group.addAction(act)
             size_menu.addAction(act)
+
+    def _build_pet_skin_menu(self, parent_menu):
+        """🐾 QActionGroup을 이용해 단 1개의 펫 스킨만 정확히 체크되도록 보장"""
+        pet_menu = parent_menu.addMenu("🐾 펫 스킨 변경")
+        pet_group = QActionGroup(self)
+        pet_group.setExclusive(True)
+        
+        for pet_key, pet_info in self.pets_registry.items():
+            if not pet_info.get("enabled", True):
+                continue
+                
+            pet_name = pet_info.get("name", pet_key)
+            pet_action = QAction(pet_name, self)
+            pet_action.setCheckable(True)
+            if self.current_pet == pet_key:
+                pet_action.setChecked(True)
+            pet_action.triggered.connect(lambda checked, k=pet_key: self.change_pet(k))
+            pet_group.addAction(pet_action)
+            pet_menu.addAction(pet_action)
 
     # --- 우클릭 메뉴 ---
     def show_context_menu(self, global_pos):
@@ -346,20 +368,10 @@ class DesktopPet(QWidget):
         toggle_top_action.triggered.connect(self.toggle_always_on_top)
         menu.addAction(toggle_top_action)
         
-        pet_menu = menu.addMenu("🐾 펫 스킨 변경")
-        for pet_key, pet_info in self.pets_registry.items():
-            if not pet_info.get("enabled", True):
-                continue
-                
-            pet_name = pet_info.get("name", pet_key)
-            pet_action = QAction(pet_name, self)
-            pet_action.setCheckable(True)
-            if self.current_pet == pet_key:
-                pet_action.setChecked(True)
-            pet_action.triggered.connect(lambda checked, k=pet_key: self.change_pet(k))
-            pet_menu.addAction(pet_action)
+        # 🐾 단일 체크 보장 펫 스킨 메뉴
+        self._build_pet_skin_menu(menu)
             
-        # 📏 펫 크기 서브메뉴
+        # 📏 단일 체크 보장 크기 메뉴
         self._build_size_menu(menu)
         
         menu.addSeparator()
@@ -380,8 +392,8 @@ class DesktopPet(QWidget):
         self.load_and_cache_standard_assets()
         self.update_pet_image()
         self.update_tooltip()
-        if hasattr(self, 'tray_icon') and self.anim_frames["walk_r"]:
-            self.tray_icon.setIcon(QIcon(self.anim_frames["walk_r"][0]))
+        if hasattr(self, 'tray_icon'):
+            self.update_tray_menu()
 
     def toggle_always_on_top(self):
         self.is_always_on_top = not self.is_always_on_top
@@ -437,21 +449,10 @@ class DesktopPet(QWidget):
         toggle_top_action.triggered.connect(self.toggle_always_on_top_from_tray)
         tray_menu.addAction(toggle_top_action)
         
-        # 🐾 펫 스킨 변경 서브메뉴
-        pet_menu = tray_menu.addMenu("🐾 펫 스킨 변경")
-        for pet_key, pet_info in self.pets_registry.items():
-            if not pet_info.get("enabled", True):
-                continue
-                
-            pet_name = pet_info.get("name", pet_key)
-            pet_action = QAction(pet_name, self)
-            pet_action.setCheckable(True)
-            if self.current_pet == pet_key:
-                pet_action.setChecked(True)
-            pet_action.triggered.connect(lambda checked, k=pet_key: self.change_pet(k))
-            pet_menu.addAction(pet_action)
+        # 🐾 QActionGroup 기반 단일 선택 펫 스킨 메뉴
+        self._build_pet_skin_menu(tray_menu)
             
-        # 📏 트레이 아이콘 메뉴에도 펫 크기 서브메뉴 추가! (24px ~ 128px)
+        # 📏 펫 크기 메뉴
         self._build_size_menu(tray_menu)
             
         tray_menu.addSeparator()
