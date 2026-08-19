@@ -11,8 +11,8 @@ PETS_REGISTRY_PATH = os.path.join(os.path.dirname(__file__), "pets.json")
 
 DEFAULT_CONFIG = {
     "current_pet": "cat_cheese",
-    "pet_width": 80,
-    "pet_height": 80,
+    "pet_width": 48,
+    "pet_height": 48,
     "is_always_on_top": True,
     "move_speed": 1,
     "anim_interval_ms": 140
@@ -24,7 +24,6 @@ DEFAULT_PETS = {
 }
 
 def load_pets_registry():
-    """pets.json 메타데이터 레지스트리를 읽고, assets/ 폴더를 스캔하여 신규 펫 자동 동기화"""
     pets_data = DEFAULT_PETS.copy()
     if os.path.exists(PETS_REGISTRY_PATH):
         try:
@@ -34,7 +33,6 @@ def load_pets_registry():
         except Exception as e:
             print(f"⚠️ pets.json 로드 실패: {e}")
 
-    # assets/ 스캔하여 새로 발견된 폴더 자동 등록
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
     if os.path.exists(assets_dir):
         for item in os.listdir(assets_dir):
@@ -76,7 +74,6 @@ class DesktopPet(QWidget):
     def __init__(self):
         super().__init__()
         
-        # 1. config 및 pets 레지스트리 로드
         self.config = load_config()
         self.pets_registry = load_pets_registry()
         
@@ -84,8 +81,8 @@ class DesktopPet(QWidget):
         if self.current_pet not in self.pets_registry:
             self.current_pet = "cat_cheese"
             
-        self.pet_width = self.config.get("pet_width", 80)
-        self.pet_height = self.config.get("pet_height", 80)
+        self.pet_width = self.config.get("pet_width", 48)
+        self.pet_height = self.config.get("pet_height", 48)
         self.is_always_on_top = self.config.get("is_always_on_top", True)
         self.move_speed = self.config.get("move_speed", 1)
         self.anim_interval = self.config.get("anim_interval_ms", 140)
@@ -95,10 +92,8 @@ class DesktopPet(QWidget):
         self.direction = 1  # 1: 오른쪽, -1: 왼쪽
         self.state = "WALK" # "WALK", "IDLE", "DRAG", "HAPPY", "SPECIAL"
         
-        # 2. 창 투명화 및 무테두리 설정
         self.init_window_flags()
         
-        # 3. 표준 에셋 캐싱
         self.anim_frames = {
             "walk_r": [], "walk_l": [],
             "idle_r": [], "idle_l": [],
@@ -109,16 +104,13 @@ class DesktopPet(QWidget):
         self.current_frame_idx = 0
         self.load_and_cache_standard_assets()
         
-        # 4. UI 구성
         self.label = QLabel(self)
         self.label.resize(self.pet_width, self.pet_height)
         self.update_pet_image()
         
-        # 호버 커서 & 툴팁
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.update_tooltip()
         
-        # 5. 독립된 타이머 세팅
         self.move_timer = QTimer(self)
         self.move_timer.timeout.connect(self.update_movement)
         self.move_timer.start(30)
@@ -131,10 +123,8 @@ class DesktopPet(QWidget):
         self.state_timer.timeout.connect(self.update_behavior_state)
         self.state_timer.start(8000)
         
-        # 6. 시스템 트레이 아이콘
         self.init_tray_icon()
         
-        # 초기 위치 설정
         screen = QApplication.primaryScreen().geometry()
         self.move(screen.width() - 250, screen.height() - 150)
         self.show()
@@ -337,11 +327,10 @@ class DesktopPet(QWidget):
         toggle_top_action.triggered.connect(self.toggle_always_on_top)
         menu.addAction(toggle_top_action)
         
-        # 🐾 enabled: true 인 펫만 노출
         pet_menu = menu.addMenu("🐾 펫 스킨 변경")
         for pet_key, pet_info in self.pets_registry.items():
             if not pet_info.get("enabled", True):
-                continue  # 비활성화(enabled: false) 상태면 메뉴에서 노출 안 함
+                continue
                 
             pet_name = pet_info.get("name", pet_key)
             pet_action = QAction(pet_name, self)
@@ -351,22 +340,24 @@ class DesktopPet(QWidget):
             pet_action.triggered.connect(lambda checked, k=pet_key: self.change_pet(k))
             pet_menu.addAction(pet_action)
             
-        # 📏 크기 변경 메뉴 (매우 작게 32px 신규 추가!)
+        # 📏 6단계 크기 프리셋 (24px ~ 128px, 기본 48px 디폴트!)
         size_menu = menu.addMenu("📏 펫 크기")
-        tiny_action = QAction("🔹 매우 작게 (32px)", self)
-        small_action = QAction("작게 (48px)", self)
-        medium_action = QAction("보통 (80px)", self)
-        large_action = QAction("크게 (120px)", self)
+        size_options = [
+            ("🔹 매우 작게 (24px)", 24),
+            ("🔸 작게 (32px)", 32),
+            ("⭐️ 기본 (48px)", 48),
+            ("🔹 보통 (64px)", 64),
+            ("🔸 크게 (96px)", 96),
+            ("🌟 매우 크게 (128px)", 128)
+        ]
         
-        tiny_action.triggered.connect(lambda: self.change_size(32))
-        small_action.triggered.connect(lambda: self.change_size(48))
-        medium_action.triggered.connect(lambda: self.change_size(80))
-        large_action.triggered.connect(lambda: self.change_size(120))
-        
-        size_menu.addAction(tiny_action)
-        size_menu.addAction(small_action)
-        size_menu.addAction(medium_action)
-        size_menu.addAction(large_action)
+        for label, sz in size_options:
+            act = QAction(label, self)
+            act.setCheckable(True)
+            if self.pet_width == sz:
+                act.setChecked(True)
+            act.triggered.connect(lambda checked, s=sz: self.change_size(s))
+            size_menu.addAction(act)
         
         menu.addSeparator()
         hide_action = QAction("🙈 숨기기 (트레이로)", self)
