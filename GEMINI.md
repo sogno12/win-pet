@@ -19,8 +19,9 @@ conda activate wincat
 pip install PyQt6 Pillow requests
 
 # 4. 실행
-python setup_assets.py  # 픽셀 이미지 준비 (최초 1회)
-python main.py          # 펫 실행
+python setup_assets.py        # 픽셀 이미지 준비 (최초 1회)
+python process_drag_assets.py # 뒷목 잡힌 전용 프레임 준비 (최초 1회)
+python main.py                # 펫 실행
 ```
 
 ---
@@ -32,7 +33,9 @@ python main.py          # 펫 실행
 - [x] 픽셀 보정 렌더링 (Nearest-Neighbor / Pixelated)
 - [x] 독립 타이머 기반 60FPS 부드러운 자율 걷기/대기/드래그 애니메이션 & 이동 로직
 - [x] 마우스 호버 커서(손가락 👆) & 안내 툴팁 추가
-- [x] 설정 영구 보관용 `config.json` 연동 (크기, 항상 위 고정 등)
+- [x] 설정 영구 보관용 `config.json` 연동 (크기, 스킨, 항상 위 고정 등)
+- [x] 다중 펫 스킨 연동 (🧀 치즈태비 고양이 / 🦉 헤드위그 하얀 부엉이)
+- [x] **뒷목 잡힌 전용 픽셀 프레임 (`drag.png`) 연동** (어색한 회전 제거 후 전용 포즈 전환)
 - [x] 시스템 트레이 아이콘 메뉴 (✨ 내 앞으로 불러오기 / 📌 항상 위에 표시 / 🙈 숨기기 / ❌ 종료)
 - [x] 이미지 픽셀화 변환 모듈 (`pixelator.py`) 작성 (일반 이미지 ➡️ 픽셀 펫 변환)
 
@@ -54,6 +57,6 @@ python main.py          # 펫 실행
 ---
 
 ### 💾 데이터 및 자원 관리
-- **픽셀 이미지 자원:** 32x32 / 64x64 픽셀 아트 스프라이트 프레임 (`assets/cat/` 폴더)
+- **픽셀 이미지 자원:** 32x32 / 64x64 픽셀 아트 스프라이트 프레임 (`assets/cat_cheese/`, `assets/owl_white/` 폴더)
 - **설정 데이터:** `config.json`
 - **날짜 형식:** 모든 날짜 형식은 `yyyy/MM/dd`로 통일
