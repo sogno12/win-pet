@@ -19,10 +19,6 @@ def remove_magenta_bg(img):
     return img
 
 def make_square_tight_crop(img, padding=4):
-    """
-    이미지 투명 여백을 바짝 잘라내고(Bounding Box), 
-    1:1 정방형 정사각형 캔버스 정중앙에 배치하여 펫 크기를 1:1로 맞춥니다.
-    """
     bbox = img.getbbox()
     if not bbox:
         return img
@@ -31,18 +27,24 @@ def make_square_tight_crop(img, padding=4):
     cw, ch = cropped.size
     max_dim = max(cw, ch) + (padding * 2)
     
-    # 1:1 정방형 정사각형 캔버스 생성
     square_img = Image.new("RGBA", (max_dim, max_dim), (255, 255, 255, 0))
     offset_x = (max_dim - cw) // 2
     offset_y = (max_dim - ch) // 2
     square_img.paste(cropped, (offset_x, offset_y))
     return square_img
 
-def setup_all_assets():
+def clean_and_setup_all_assets():
     base_dir = os.path.dirname(__file__)
+    assets_dir = os.path.join(base_dir, "assets")
     
+    # 🧹 구버전 1:4 길쭉한 파일 싹 청소!
+    for pet in ["cat_cheese", "owl_white"]:
+        p_dir = os.path.join(assets_dir, pet)
+        if os.path.exists(p_dir):
+            shutil.rmtree(p_dir)
+            
     # --- 1. 🦉 복슬복슬 헤드위그 하얀 부엉이 세팅 ---
-    owl_base = os.path.join(base_dir, "assets", "owl_white")
+    owl_base = os.path.join(assets_dir, "owl_white")
     owl_walk = os.path.join(owl_base, "walk")
     owl_drag = os.path.join(owl_base, "drag")
     owl_idle = os.path.join(owl_base, "idle")
@@ -63,7 +65,7 @@ def setup_all_assets():
         for c in range(cols):
             box = (c * fw, 2 * fh, (c + 1) * fw, 3 * fh)
             frame = make_square_tight_crop(img.crop(box))
-            frame.save(os.path.join(owl_walk, f"walk_{c}.png"), "PNG")
+            frame.save(os.path.join(owl_walk, f"frame_{c}.png"), "PNG")
             
         idle_frame = make_square_tight_crop(img.crop((0, 0, fw, fh)))
         idle_frame.save(os.path.join(owl_idle, "idle_0.png"), "PNG")
@@ -72,8 +74,8 @@ def setup_all_assets():
         d_img = make_square_tight_crop(remove_magenta_bg(Image.open(drag_img_path)))
         d_img.save(os.path.join(owl_drag, "drag_0.png"), "PNG")
 
-    # --- 2. 🧀 치즈태비 고양이 세팅 (1:1 캔버스 맞춤 적용) ---
-    cat_base = os.path.join(base_dir, "assets", "cat_cheese")
+    # --- 2. 🧀 치즈태비 고양이 세팅 ---
+    cat_base = os.path.join(assets_dir, "cat_cheese")
     cat_walk = os.path.join(cat_base, "walk")
     cat_drag = os.path.join(cat_base, "drag")
     cat_idle = os.path.join(cat_base, "idle")
@@ -100,9 +102,8 @@ def setup_all_assets():
         fw = w // 4
         for i in range(4):
             raw_frame = c_img.crop((i * fw, 0, (i + 1) * fw, h))
-            # 💡 여백 자르고 1:1 정방형 캔버스 정중앙 배치
             frame = make_square_tight_crop(raw_frame)
-            frame.save(os.path.join(cat_walk, f"walk_{i}.png"), "PNG")
+            frame.save(os.path.join(cat_walk, f"frame_{i}.png"), "PNG")
             
         idle_frame = make_square_tight_crop(c_img.crop((0, 0, fw, h)))
         idle_frame.save(os.path.join(cat_idle, "idle_0.png"), "PNG")
@@ -120,7 +121,7 @@ def setup_all_assets():
         cd_frame = make_square_tight_crop(cd_img)
         cd_frame.save(os.path.join(cat_drag, "drag_0.png"), "PNG")
         
-    print("[OK] All pet assets re-processed with 1:1 Square Tight-Crop!")
+    print("[CLEAN COMPLETE] Regenerated all pet assets into perfect 1:1 square canvas!")
 
 if __name__ == "__main__":
-    setup_all_assets()
+    clean_and_setup_all_assets()
