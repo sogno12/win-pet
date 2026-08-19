@@ -18,6 +18,26 @@ def remove_magenta_bg(img):
     img.putdata(new_data)
     return img
 
+def make_square_tight_crop(img, padding=4):
+    """
+    이미지 투명 여백을 바짝 잘라내고(Bounding Box), 
+    1:1 정방형 정사각형 캔버스 정중앙에 배치하여 펫 크기를 1:1로 맞춥니다.
+    """
+    bbox = img.getbbox()
+    if not bbox:
+        return img
+    cropped = img.crop(bbox)
+    
+    cw, ch = cropped.size
+    max_dim = max(cw, ch) + (padding * 2)
+    
+    # 1:1 정방형 정사각형 캔버스 생성
+    square_img = Image.new("RGBA", (max_dim, max_dim), (255, 255, 255, 0))
+    offset_x = (max_dim - cw) // 2
+    offset_y = (max_dim - ch) // 2
+    square_img.paste(cropped, (offset_x, offset_y))
+    return square_img
+
 def setup_all_assets():
     base_dir = os.path.dirname(__file__)
     
@@ -42,19 +62,17 @@ def setup_all_assets():
         
         for c in range(cols):
             box = (c * fw, 2 * fh, (c + 1) * fw, 3 * fh)
-            frame = img.crop(box)
+            frame = make_square_tight_crop(img.crop(box))
             frame.save(os.path.join(owl_walk, f"walk_{c}.png"), "PNG")
             
-        idle_frame = img.crop((0, 0, fw, fh))
+        idle_frame = make_square_tight_crop(img.crop((0, 0, fw, fh)))
         idle_frame.save(os.path.join(owl_idle, "idle_0.png"), "PNG")
         
     if os.path.exists(drag_img_path):
-        d_img = remove_magenta_bg(Image.open(drag_img_path))
+        d_img = make_square_tight_crop(remove_magenta_bg(Image.open(drag_img_path)))
         d_img.save(os.path.join(owl_drag, "drag_0.png"), "PNG")
-        
-    print("[OK] Cute Owl assets generated!")
 
-    # --- 2. 🧀 치즈태비 고양이 세팅 ---
+    # --- 2. 🧀 치즈태비 고양이 세팅 (1:1 캔버스 맞춤 적용) ---
     cat_base = os.path.join(base_dir, "assets", "cat_cheese")
     cat_walk = os.path.join(cat_base, "walk")
     cat_drag = os.path.join(cat_base, "drag")
@@ -81,10 +99,12 @@ def setup_all_assets():
         w, h = c_img.size
         fw = w // 4
         for i in range(4):
-            frame = c_img.crop((i * fw, 0, (i + 1) * fw, h))
+            raw_frame = c_img.crop((i * fw, 0, (i + 1) * fw, h))
+            # 💡 여백 자르고 1:1 정방형 캔버스 정중앙 배치
+            frame = make_square_tight_crop(raw_frame)
             frame.save(os.path.join(cat_walk, f"walk_{i}.png"), "PNG")
             
-        idle_frame = c_img.crop((0, 0, fw, h))
+        idle_frame = make_square_tight_crop(c_img.crop((0, 0, fw, h)))
         idle_frame.save(os.path.join(cat_idle, "idle_0.png"), "PNG")
         
     if os.path.exists(cat_drag_path):
@@ -97,9 +117,10 @@ def setup_all_assets():
             else:
                 new_data.append(item)
         cd_img.putdata(new_data)
-        cd_img.save(os.path.join(cat_drag, "drag_0.png"), "PNG")
+        cd_frame = make_square_tight_crop(cd_img)
+        cd_frame.save(os.path.join(cat_drag, "drag_0.png"), "PNG")
         
-    print("[OK] Cheese Cat assets generated!")
+    print("[OK] All pet assets re-processed with 1:1 Square Tight-Crop!")
 
 if __name__ == "__main__":
     setup_all_assets()
