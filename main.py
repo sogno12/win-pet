@@ -340,7 +340,6 @@ class DesktopPet(QWidget):
             size_menu.addAction(act)
 
     def _build_pet_skin_menu(self, parent_menu):
-        """🐾 QActionGroup을 이용해 단 1개의 펫 스킨만 정확히 체크되도록 보장"""
         pet_menu = parent_menu.addMenu("🐾 펫 스킨 변경")
         pet_group = QActionGroup(self)
         pet_group.setExclusive(True)
@@ -368,10 +367,7 @@ class DesktopPet(QWidget):
         toggle_top_action.triggered.connect(self.toggle_always_on_top)
         menu.addAction(toggle_top_action)
         
-        # 🐾 단일 체크 보장 펫 스킨 메뉴
         self._build_pet_skin_menu(menu)
-            
-        # 📏 단일 체크 보장 크기 메뉴
         self._build_size_menu(menu)
         
         menu.addSeparator()
@@ -404,11 +400,23 @@ class DesktopPet(QWidget):
         self.summon_to_mouse()
 
     def summon_to_mouse(self):
-        """✨ 펫을 내 마우스가 있는 위치로 순간이동 소환 및 맨 위로 노출"""
+        """✨ 딜레이(50ms) 후 마우스 커서 위치로 펫을 100% 강제 소환"""
+        QTimer.singleShot(50, self._do_summon)
+
+    def _do_summon(self):
+        # 1. 창을 숨김 해제하고 무조건 보이기
         self.show()
+        self.setHidden(False)
+        
+        # 2. 마우스 커서 위치 탐색
         mouse_pos = QCursor.pos()
-        self.move(mouse_pos.x() - (self.pet_width // 2), mouse_pos.y() - (self.pet_height // 2))
-        self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
+        target_x = max(0, mouse_pos.x() - (self.pet_width // 2))
+        target_y = max(0, mouse_pos.y() - (self.pet_height // 2))
+        self.move(target_x, target_y)
+        
+        # 3. Windows OS Z-Order 강제 재설정하여 최상단으로 복구
+        self.init_window_flags()
+        self.show()
         self.raise_()
         self.activateWindow()
 
@@ -449,10 +457,7 @@ class DesktopPet(QWidget):
         toggle_top_action.triggered.connect(self.toggle_always_on_top_from_tray)
         tray_menu.addAction(toggle_top_action)
         
-        # 🐾 QActionGroup 기반 단일 선택 펫 스킨 메뉴
         self._build_pet_skin_menu(tray_menu)
-            
-        # 📏 펫 크기 메뉴
         self._build_size_menu(tray_menu)
             
         tray_menu.addSeparator()
