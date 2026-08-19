@@ -1,69 +1,105 @@
 import os
+import shutil
 from PIL import Image
 
-def slice_grid_sprite_sheet(image_path, output_dir, rows=2, cols=2):
-    if not os.path.exists(image_path):
-        print(f"[ERR] Image file missing: {image_path}")
-        return
-        
-    os.makedirs(output_dir, exist_ok=True)
-    img = Image.open(image_path).convert("RGBA")
-    
-    datas = img.getdata()
+def is_magenta_bg(r, g, b):
+    return r > 180 and g < 100 and b > 180
+
+def remove_magenta_bg(img):
+    img = img.convert("RGBA")
+    datas = img.get_flattened_data() if hasattr(img, 'get_flattened_data') else img.getdata()
     new_data = []
     for item in datas:
-        if item[0] > 220 and item[1] > 220 and item[2] > 220:
+        r, g, b, a = item[0], item[1], item[2], item[3]
+        if is_magenta_bg(r, g, b):
             new_data.append((255, 255, 255, 0))
         else:
-            new_data.append(item)
+            new_data.append((r, g, b, a))
     img.putdata(new_data)
-    
-    w, h = img.size
-    frame_w = w // cols
-    frame_h = h // rows
-    
-    idx = 0
-    for r in range(rows):
-        for c in range(cols):
-            box = (c * frame_w, r * frame_h, (c + 1) * frame_w, (r + 1) * frame_h)
-            frame = img.crop(box)
-            frame_path = os.path.join(output_dir, f"frame_{idx}.png")
-            frame.save(frame_path, "PNG")
-            print(f"[OK] Owl frame saved: {frame_path}")
-            idx += 1
+    return img
 
-def slice_linear_sprite_sheet(image_path, output_dir, num_frames=4):
-    if not os.path.exists(image_path):
-        return
-    os.makedirs(output_dir, exist_ok=True)
-    img = Image.open(image_path).convert("RGBA")
-    
-    datas = img.getdata()
-    new_data = []
-    for item in datas:
-        if item[0] > 210 and item[1] > 210 and item[2] > 210:
-            new_data.append((255, 255, 255, 0))
-        else:
-            new_data.append(item)
-    img.putdata(new_data)
-    
-    w, h = img.size
-    frame_w = w // num_frames
-    
-    for i in range(num_frames):
-        box = (i * frame_w, 0, (i + 1) * frame_w, h)
-        frame = img.crop(box)
-        frame_path = os.path.join(output_dir, f"frame_{i}.png")
-        frame.save(frame_path, "PNG")
-        print(f"[OK] Cat frame saved: {frame_path}")
-
-if __name__ == "__main__":
+def setup_all_assets():
     base_dir = os.path.dirname(__file__)
     
-    generated_cat = r"C:\Users\sjcho\.gemini\antigravity\brain\dced5723-8a67-4ff8-b712-4eed41639c10\pixel_cat_1787120321696.jpg"
-    cat_dir = os.path.join(base_dir, "assets", "cat_cheese")
-    slice_linear_sprite_sheet(generated_cat, cat_dir, 4)
+    # --- 1. 🦉 복슬복슬 헤드위그 하얀 부엉이 세팅 ---
+    owl_base = os.path.join(base_dir, "assets", "owl_white")
+    owl_walk = os.path.join(owl_base, "walk")
+    owl_drag = os.path.join(owl_base, "drag")
+    owl_idle = os.path.join(owl_base, "idle")
     
-    generated_owl = r"C:\Users\sjcho\.gemini\antigravity\brain\dced5723-8a67-4ff8-b712-4eed41639c10\pixel_owl_1787124091067.jpg"
-    owl_dir = os.path.join(base_dir, "assets", "owl_white")
-    slice_grid_sprite_sheet(generated_owl, owl_dir, 2, 2)
+    os.makedirs(owl_walk, exist_ok=True)
+    os.makedirs(owl_drag, exist_ok=True)
+    os.makedirs(owl_idle, exist_ok=True)
+    
+    grid_img_path = r"C:\Users\sjcho\.gemini\antigravity\brain\dced5723-8a67-4ff8-b712-4eed41639c10\cute_hedwig_owl_1787124649534.jpg"
+    drag_img_path = r"C:\Users\sjcho\.gemini\antigravity\brain\dced5723-8a67-4ff8-b712-4eed41639c10\cute_hedwig_owl_drag_1787124666832.jpg"
+    
+    if os.path.exists(grid_img_path):
+        img = remove_magenta_bg(Image.open(grid_img_path))
+        w, h = img.size
+        cols, rows = 4, 4
+        fw, fh = w // cols, h // rows
+        
+        for c in range(cols):
+            box = (c * fw, 2 * fh, (c + 1) * fw, 3 * fh)
+            frame = img.crop(box)
+            frame.save(os.path.join(owl_walk, f"walk_{c}.png"), "PNG")
+            
+        idle_frame = img.crop((0, 0, fw, fh))
+        idle_frame.save(os.path.join(owl_idle, "idle_0.png"), "PNG")
+        
+    if os.path.exists(drag_img_path):
+        d_img = remove_magenta_bg(Image.open(drag_img_path))
+        d_img.save(os.path.join(owl_drag, "drag_0.png"), "PNG")
+        
+    print("[OK] Cute Owl assets generated!")
+
+    # --- 2. 🧀 치즈태비 고양이 세팅 ---
+    cat_base = os.path.join(base_dir, "assets", "cat_cheese")
+    cat_walk = os.path.join(cat_base, "walk")
+    cat_drag = os.path.join(cat_base, "drag")
+    cat_idle = os.path.join(cat_base, "idle")
+    
+    os.makedirs(cat_walk, exist_ok=True)
+    os.makedirs(cat_drag, exist_ok=True)
+    os.makedirs(cat_idle, exist_ok=True)
+    
+    cat_grid_path = r"C:\Users\sjcho\.gemini\antigravity\brain\dced5723-8a67-4ff8-b712-4eed41639c10\pixel_cat_1787120321696.jpg"
+    cat_drag_path = r"C:\Users\sjcho\.gemini\antigravity\brain\dced5723-8a67-4ff8-b712-4eed41639c10\pixel_cat_drag_1787124485594.jpg"
+    
+    if os.path.exists(cat_grid_path):
+        c_img = Image.open(cat_grid_path).convert("RGBA")
+        datas = c_img.get_flattened_data() if hasattr(c_img, 'get_flattened_data') else c_img.getdata()
+        new_data = []
+        for item in datas:
+            if item[0] > 210 and item[1] > 210 and item[2] > 210:
+                new_data.append((255, 255, 255, 0))
+            else:
+                new_data.append(item)
+        c_img.putdata(new_data)
+        
+        w, h = c_img.size
+        fw = w // 4
+        for i in range(4):
+            frame = c_img.crop((i * fw, 0, (i + 1) * fw, h))
+            frame.save(os.path.join(cat_walk, f"walk_{i}.png"), "PNG")
+            
+        idle_frame = c_img.crop((0, 0, fw, h))
+        idle_frame.save(os.path.join(cat_idle, "idle_0.png"), "PNG")
+        
+    if os.path.exists(cat_drag_path):
+        cd_img = Image.open(cat_drag_path).convert("RGBA")
+        datas = cd_img.get_flattened_data() if hasattr(cd_img, 'get_flattened_data') else cd_img.getdata()
+        new_data = []
+        for item in datas:
+            if item[0] > 210 and item[1] > 210 and item[2] > 210:
+                new_data.append((255, 255, 255, 0))
+            else:
+                new_data.append(item)
+        cd_img.putdata(new_data)
+        cd_img.save(os.path.join(cat_drag, "drag_0.png"), "PNG")
+        
+    print("[OK] Cheese Cat assets generated!")
+
+if __name__ == "__main__":
+    setup_all_assets()

@@ -1,7 +1,7 @@
 {
   "current_pet": "owl_white",
-  "pet_width": 80,
-  "pet_height": 80,
+  "pet_width": 48,
+  "pet_height": 48,
   "is_always_on_top": true,
   "move_speed": 1,
   "anim_interval_ms": 140
