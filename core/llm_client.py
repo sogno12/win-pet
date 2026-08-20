@@ -142,6 +142,49 @@ class LLMClient:
                         },
                         "required": ["action"]
                     }
+                },
+                {
+                    "name": "set_timer",
+                    "description": "일회성 타이머/알람을 설정합니다. (예: 10분 뒤 알림, 30분 타이머 설정)",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "minutes": {
+                                "type": "NUMBER",
+                                "description": "타이머 분 시간 (예: 5, 10, 30, 60)"
+                            },
+                            "memo": {
+                                "type": "STRING",
+                                "description": "타이머 내용 또는 메모 (예: 약 먹기, 찌개 끄기, 알림 등)"
+                            }
+                        },
+                        "required": ["minutes"]
+                    }
+                },
+                {
+                    "name": "start_pomodoro",
+                    "description": "집중 시간과 휴식 시간이 자동 반복되는 포모도로(Pomodoro) 세션을 시작합니다.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "work_minutes": {
+                                "type": "INTEGER",
+                                "description": "집중 시간(분) (기본값 25)"
+                            },
+                            "rest_minutes": {
+                                "type": "INTEGER",
+                                "description": "휴식 시간(분) (기본값 5)"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "stop_pomodoro",
+                    "description": "현재 진행 중인 포모도로 타이머 사이클을 중단하거나 끕니다.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {}
+                    }
                 }
             ]
         }
@@ -149,11 +192,7 @@ class LLMClient:
 
     @classmethod
     def get_api_key(cls):
-        config = ConfigManager.load_config()
-        saved_key = config.get("gemini_api_key", "").strip()
-        if saved_key:
-            return saved_key
-        return os.environ.get("GEMINI_API_KEY", "").strip()
+        return ConfigManager.get_api_key()
 
     @classmethod
     def ask_pet(cls, pet_key, user_query):
@@ -226,9 +265,12 @@ class LLMClient:
                     fn_name = fn_call.get("name", "")
                     fn_args = fn_call.get("args", {})
                     
-                    # 1. 툴 로직 실제 실행 (InfoAgent / PCAgent)
+                    # 1. 툴 로직 실제 실행 (InfoAgent / ScheduleAgent / PCAgent)
                     if fn_name in ["get_weather", "recommend_lunch"]:
                         exec_result = InfoAgent.execute_tool(fn_name, fn_args)
+                    elif fn_name in ["set_timer", "start_pomodoro", "stop_pomodoro"]:
+                        from core.schedule_agent import ScheduleAgent
+                        exec_result = ScheduleAgent.execute_tool(fn_name, fn_args)
                     else:
                         exec_result = PCAgent.execute_tool(fn_name, fn_args)
                     
@@ -289,6 +331,18 @@ class LLMClient:
                 # 일반 텍스트 응답 시
                 elif "text" in first_part:
                     resp = first_part["text"].strip()
+                    
+                    # 🚨 [행동 세이프티 가드] LLM이 말로만 "검색창을 띄워드릴게요", "메모장을 엽니다" 대사를 치고
+                    # 툴을 안 부른 경우, 시스템이 키워드를 자동 감지하여 100% 실시간 강제 브라우저/앱 실행!
+                    if any(kw in resp for kw in ["검색창을 띄워", "검색창을 열어", "구글 검색", "검색 결과를 띄워"]):
+                        PCAgent.search_google(user_query)
+                    elif any(kw in resp for kw in ["유튜브 검색", "유튜브를 띄워", "유튜브를 열어"]):
+                        PCAgent.search_youtube(user_query)
+                    elif any(kw in resp for kw in ["메모장을 띄워", "메모장을 열어", "메모장을 실행"]):
+                        PCAgent.launch_app("메모장")
+                    elif any(kw in resp for kw in ["계산기를 띄워", "계산기를 열어", "계산기를 실행"]):
+                        PCAgent.launch_app("계산기")
+
                     PetLogger.log_pet(pet_key, resp)
                     MemoryAgent.save_interaction(user_query, resp)
                     StatusAgent.interact("chat")

@@ -188,6 +188,67 @@ class ConfigManager:
         # 3. 현재 런타임 메모리 적용
         os.environ["GEMINI_API_KEY"] = clean_key
 
+    REG_APP_NAME = "win_pet_companion"
+
+    @classmethod
+    def is_autostart_enabled(cls) -> bool:
+        """윈도우 레지스트리에 자동 실행이 등록되어 있는지 확인"""
+        if os.name != 'nt':
+            return False
+        try:
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Run",
+                0,
+                winreg.KEY_READ
+            )
+            try:
+                val, _ = winreg.QueryValueEx(key, cls.REG_APP_NAME)
+                winreg.CloseKey(key)
+                return bool(val)
+            except FileNotFoundError:
+                winreg.CloseKey(key)
+                return False
+        except Exception:
+            return False
+
+    @classmethod
+    def set_autostart(cls, enable: bool) -> bool:
+        """윈도우 자동 실행 레지스트리 등록 및 해제"""
+        if os.name != 'nt':
+            return False
+        try:
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Run",
+                0,
+                winreg.KEY_ALL_ACCESS
+            )
+            if enable:
+                if getattr(sys, 'frozen', False):
+                    exe_path = f'"{sys.executable}"'
+                else:
+                    main_py = os.path.join(BASE_DIR, "main.py")
+                    python_exe = sys.executable
+                    exe_path = f'"{python_exe}" "{main_py}"'
+                winreg.SetValueEx(key, cls.REG_APP_NAME, 0, winreg.REG_SZ, exe_path)
+            else:
+                try:
+                    winreg.DeleteValue(key, cls.REG_APP_NAME)
+                except FileNotFoundError:
+                    pass
+            winreg.CloseKey(key)
+
+            cfg = cls.load_config()
+            cfg["start_with_windows"] = enable
+            cls.save_config(cfg)
+            return True
+        except Exception as e:
+            print(f"⚠️ 레지스트리 설정 오류: {e}")
+            return False
+
     @staticmethod
     def save_pets_registry(pets_data):
         try:

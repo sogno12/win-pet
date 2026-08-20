@@ -96,6 +96,12 @@ class PetWidget(QWidget):
         # 💡 최초 1회 API 키 등록 안내 팝업 점검 (800ms 후)
         QTimer.singleShot(800, self.check_first_run_api_key_prompt)
 
+        # 💡 ScheduleAgent 시그널 바인딩 (타이머 알림 & 포모도로 전환)
+        from core.schedule_agent import ScheduleAgent
+        sched = ScheduleAgent.get_instance()
+        sched.timer_triggered.connect(self._on_schedule_timer_triggered)
+        sched.pomodoro_phase_changed.connect(self._on_pomodoro_phase_changed)
+
     def set_tray_manager(self, tray_manager):
         self.tray_manager = tray_manager
 
@@ -508,6 +514,33 @@ class PetWidget(QWidget):
             if self.tray_manager:
                 self.tray_manager.update_tray_menu()
 
+    def _on_schedule_timer_triggered(self, timer_id, memo):
+        self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
+        self.update_pet_image()
+        self.speech_bubble.show_message(f"⏰ [알림] '{memo}' 시간이 다 되었어요!", duration_ms=10000)
+
+    def _on_pomodoro_phase_changed(self, phase, msg, cycle_count, remaining_secs):
+        if phase == "REST_START":
+            self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
+        elif phase == "WORK_START":
+            self.state = "IDLE"
+        elif phase == "STOPPED":
+            self.state = "IDLE"
+        self.update_pet_image()
+        self.speech_bubble.show_message(msg, duration_ms=10000)
+
+    def open_timer_dialog(self):
+        from ui.dialog_timer import DialogTimer
+        dlg = DialogTimer(self)
+        dlg.exec()
+
+    def toggle_autostart(self):
+        from PyQt6.QtWidgets import QMessageBox
+        enabled = not ConfigManager.is_autostart_enabled()
+        if ConfigManager.set_autostart(enabled):
+            status_str = "등록" if enabled else "해제"
+            QMessageBox.information(self, "성공", f"🚀 윈도우 시작 시 자동 실행이 {status_str}되었습니다.")
+
     def open_status_dialog(self):
         from ui.dialog_status import DialogStatus
         dlg = DialogStatus(self)
@@ -521,12 +554,22 @@ class PetWidget(QWidget):
         status_action.triggered.connect(self.open_status_dialog)
         menu.addAction(status_action)
 
+        timer_action = QAction("⏰ 펫 타이머 / 포모도로...", self)
+        timer_action.triggered.connect(self.open_timer_dialog)
+        menu.addAction(timer_action)
+
         menu.addSeparator()
 
         top_text = "📌 맨 위 고정 해제" if self.is_always_on_top else "📌 항상 위에 표시"
         toggle_top_action = QAction(top_text, self)
         toggle_top_action.triggered.connect(self.toggle_always_on_top)
         menu.addAction(toggle_top_action)
+
+        autostart_action = QAction("🚀 윈도우 시작 시 자동 실행", self)
+        autostart_action.setCheckable(True)
+        autostart_action.setChecked(ConfigManager.is_autostart_enabled())
+        autostart_action.triggered.connect(self.toggle_autostart)
+        menu.addAction(autostart_action)
 
         self._build_pet_skin_menu(menu)
         self.build_size_menu(menu)

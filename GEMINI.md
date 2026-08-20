@@ -82,7 +82,7 @@ python main.py                # 펫 실행
 - [x] **[1순위] PC 제어 Agent (Function Calling) & 로깅 시스템 & 키워드 페르소나 엔진:**
   - [x] 유튜브 음악/영상 검색 재생, 메모장/계산기/작업관리자 앱 실행, PC 화면 잠금, 볼륨 조절/음소거 구현 ([`core/pc_agent.py`](file:///d:/sjchoi/win_pet/core/pc_agent.py))
   - [x] Gemini REST API `systemInstruction` 페이로드 분리로 Function Calling 트리거율 100% 보장 ([`core/llm_client.py`](file:///d:/sjchoi/win_pet/core/llm_client.py))
-  - [x] **[버그 수정] 메모장/앱 실행 요청 시 텍스트 시늉만 하고 실제 실행되지 않던 Function Call 미트리거 버그 완벽 수정**
+  - [x] **[버그 수정] 메모장/검색/앱 실행 요청 시 말로만 시늉 대사 치고 안 여는 현상 원천 차단 (Action-Fulfillment Safety Guard 파이썬 강제 실행기 연동)**
   - [x] 매일 날짜별 자동 회전 로깅 시스템 구축 ([`core/logger.py`](file:///d:/sjchoi/win_pet/core/logger.py) ➔ `logs/YYYY-MM-DD.log`, `yyyy/MM/dd HH:mm:ss` 포맷 준수)
   - [x] 키워드 기반 페르소나 엔진 구축 (`pets.json` ➔ `species`, `tone`, `speech_style` 키워드 지원, [`core/persona_builder.py`](file:///d:/sjchoi/win_pet/core/persona_builder.py))
   - [x] 턴 변경 시에도 존댓말/반말이 섞이지 않는 엄격한 어미 일관성 지침 적용 완료
@@ -91,6 +91,11 @@ python main.py                # 펫 실행
 - [x] **[3순위] 기억력 Agent (Memory):** 대화 타임스탬프 및 설정 가능한 세션 만료(`session_timeout_minutes`) 기반 대화 회상 시스템 연동 완료 ([`core/memory_agent.py`](file:///d:/sjchoi/win_pet/core/memory_agent.py))
   - [x] 독립된 장기기억 보관소(`long_term_memory.json`) 및 5개 표준 태그(`profile`, `preference`, `schedule`, `habit`, `relation`) 구축
   - [x] 중요도 3~5점 이상 팩트 선별 저장 및 키워드 매칭 선택적 추출(`Selective Retrieval`) 연동 완료
+- [x] **[4순위] 🚀 윈도우 시작 시 자동 실행 (Start with Windows):** 레지스트리(`HKCU\...\Run`) 자동 등록 및 우클릭 토글 메뉴 연동 완료 ([`core/config_manager.py`](file:///d:/sjchoi/win_pet/core/config_manager.py))
+- [x] **[5순위] ⏰ 1회성 타이머 & 반복 포모도로(Pomodoro) 스케줄러:** 
+  - [x] 대화 연동 (`set_timer`, `start_pomodoro`, `stop_pomodoro`) 및 백그라운드 1초 카운트다운 ([`core/schedule_agent.py`](file:///d:/sjchoi/win_pet/core/schedule_agent.py))
+  - [x] 집중(25분) ➔ 휴식(5분) ➔ 집중 반복 사이클 및 펫 말풍선/행복 포즈(`happy/`) 시각 알림
+  - [x] 우클릭 `⏰ 펫 타이머 / 포모도로...` GUI 팝업 UI 완비 ([`ui/dialog_timer.py`](file:///d:/sjchoi/win_pet/ui/dialog_timer.py))
 - [x] **[4순위] 펫 상태 & 친밀도 (Status):** 3대 상태 지수(친밀도, 행복도, 심심함) 및 독립 보관소(`status.json`), 쓰다듬기/대화 보상 & 방치 감지, `📊 펫 상태창...` GUI 팝업 연동 완료 ([`core/status_agent.py`](file:///d:/sjchoi/win_pet/core/status_agent.py), [`ui/dialog_status.py`](file:///d:/sjchoi/win_pet/ui/dialog_status.py))
   - [x] 이미지가 없는 펫 이미지 미존재 시 `idle/` 프레임 100% 안전 폴백(Fallback) 방어 모듈 연동 완료
 - [x] **[5순위] win_pet (무설치 포터블 패키징):** `build_portable.py` 구축 완료 ➔ `dist/win_pet/win_pet.exe` 원클릭 실행 파일 및 리소스/안내문 동봉 완비
