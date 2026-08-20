@@ -1,10 +1,14 @@
 {
   "owl_white": {
-    "name": "🦉 복슬복슬 하얀 부엉이 (HD)",
+    "name": "🦉 복슬복슬 하얀 부엉이",
+    "species": "복슬복슬 하얀 부엉이",
+    "tone": "차분하고 지혜로우며 듬직함",
     "enabled": true
   },
   "fox_orange": {
-    "name": "🐾 Fox Orange",
+    "name": "🦊 주황 아기 여우",
+    "species": "앙증맞은 아기 여우",
+    "tone": "발랄하고 애교 있으며 다정함",
     "enabled": true
   }
 }

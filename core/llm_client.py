@@ -4,6 +4,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from core.config_manager import ConfigManager
 from core.pc_agent import PCAgent
 from core.logger import PetLogger
+from core.persona_builder import PersonaBuilder
 
 try:
     from dotenv import load_dotenv
@@ -25,21 +26,8 @@ class LLMWorkerThread(QThread):
         self.response_received.emit(response_text)
 
 class LLMClient:
-    """Gemini LLM API 통신 및 자연스러운 펫 페르소나 응답 생성 모듈"""
+    """Gemini LLM API 통신 및 동적 펫 키워드 페르소나 (2-Pass Function Call) 응답 생성 모듈"""
     
-    PET_PERSONAS = {
-        "fox_orange": (
-            "너는 사용자의 바탕화면에 살고 있는 앙증맞고 귀여운 아기 여우 펫이다. "
-            "과한 어미 남발을 하지 않고, 발랄하면서도 다정하게 1~2문장 이내의 완결된 문장으로 한국어로 답변해라. "
-            "사용자가 정보 검색, 구글 검색, 정보 조회(예: '고야전 검색', '뉴스 검색', '검색해줘') 등을 부탁하면 텍스트로만 '검색해 드릴게요'라고 대답하지 말고 반드시 search_google 또는 search_youtube 도구(Tools)를 즉시 호출해라."
-        ),
-        "owl_white": (
-            "너는 사용자의 바탕화면에 살고 있는 조용하고 지혜롭고 듬직한 복슬복슬 하얀 부엉이 펫이다. "
-            "과한 어미 남발을 하지 않고, 차분하고 위트 있게 1~2문장 이내의 완결된 문장으로 한국어로 답변해라. "
-            "사용자가 정보 검색, 구글 검색, 정보 조회(예: '고야전 검색', '뉴스 검색', '검색해줘') 등을 부탁하면 텍스트로만 '검색해 드릴게요'라고 대답하지 말고 반드시 search_google 또는 search_youtube 도구(Tools)를 즉시 호출해라."
-        )
-    }
-
     TOOLS_DECLARATION = [
         {
             "functionDeclarations": [
@@ -135,56 +123,16 @@ class LLMClient:
         return os.environ.get("GEMINI_API_KEY", "").strip()
 
     @classmethod
-    def format_action_response(cls, pet_key, tool_name, args, result_msg):
-        """도구 실행 후 펫 페르소나에 부합하는 피드백 멘트 반환"""
-        if pet_key == "fox_orange":
-            prefix = "🦊 "
-            if tool_name == "lock_pc":
-                return f"{prefix}주인님! PC 화면을 즉시 잠갔어요. 자물쇠를 꼭 채웠답니다! 🔒"
-            elif tool_name == "launch_app":
-                app = args.get("app_name", "프로그램")
-                return f"{prefix}요청하신 '{app}'(을)를 빠르게 켜드렸어요! 🚀"
-            elif tool_name == "search_youtube":
-                query = args.get("query", "")
-                return f"{prefix}유튜브에서 '{query}'(을)를 찾아 웹 브라우저로 띄워드렸어요! 🎵"
-            elif tool_name == "search_google":
-                query = args.get("query", args.get("url_or_query", ""))
-                return f"{prefix}구글에서 '{query}' 검색 결과를 브라우저로 빠르게 띄웠어요! 🌐"
-            elif tool_name == "open_website":
-                target = args.get("url_or_query", "")
-                return f"{prefix}'{target}' 페이지를 신나게 열었어요! 🌐"
-            elif tool_name == "adjust_volume":
-                return f"{prefix}요청하신 대로 소리/볼륨 조절을 완료했어요! 🔊"
-        else:
-            prefix = "🦉 "
-            if tool_name == "lock_pc":
-                return f"{prefix}주인님, 요청하신 대로 안전하게 PC 화면을 잠갔습니다. 🔒"
-            elif tool_name == "launch_app":
-                app = args.get("app_name", "프로그램")
-                return f"{prefix}'{app}' 응용 프로그램을 성공적으로 실행했습니다. 🚀"
-            elif tool_name == "search_youtube":
-                query = args.get("query", "")
-                return f"{prefix}유튜브에서 '{query}' 검색 결과를 띄워드렸습니다. 🎵"
-            elif tool_name == "search_google":
-                query = args.get("query", args.get("url_or_query", ""))
-                return f"{prefix}구글에서 '{query}' 검색 결과를 브라우저로 띄워드렸습니다. 🌐"
-            elif tool_name == "open_website":
-                target = args.get("url_or_query", "")
-                return f"{prefix}'{target}' 웹사이트 접속을 완료했습니다. 🌐"
-            elif tool_name == "adjust_volume":
-                return f"{prefix}시스템 볼륨 설정을 성공적으로 변경했습니다. 🔊"
-        return f"{prefix}{result_msg}"
-
-    @classmethod
     def ask_pet(cls, pet_key, user_query):
         PetLogger.log_user(user_query)
         api_key = cls.get_api_key()
-        system_instruction = cls.PET_PERSONAS.get(pet_key, cls.PET_PERSONAS["owl_white"])
         
         if not api_key:
             errMsg = "🔑 Gemini API 키가 입력되지 않았어! 펫 우클릭 ➔ [🔑 API 키 설정]에서 키를 넣어줘!"
             PetLogger.log_error(errMsg)
             return errMsg
+
+        system_instruction = PersonaBuilder.get_system_instruction(pet_key)
 
         config = ConfigManager.load_config()
         model_name = config.get("llm_model", "gemini-3.1-flash-lite").strip()
@@ -196,17 +144,18 @@ class LLMClient:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
         headers = {"Content-Type": "application/json"}
         
-        # systemInstruction을 루트 파라미터로 올바르게 선언하여 Function Calling 인식률 최적화
+        contents = [
+            {
+                "role": "user",
+                "parts": [{"text": user_query}]
+            }
+        ]
+
         payload = {
             "systemInstruction": {
                 "parts": [{"text": system_instruction}]
             },
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": user_query}]
-                }
-            ],
+            "contents": contents,
             "tools": cls.TOOLS_DECLARATION,
             "generationConfig": {
                 "temperature": 0.7,
@@ -215,7 +164,7 @@ class LLMClient:
         }
         
         try:
-            res = requests.post(url, headers=headers, json=payload, timeout=10)
+            res = requests.post(url, headers=headers, json=payload, timeout=15)
             if res.status_code == 200:
                 data = res.json()
                 candidate = data.get("candidates", [{}])[0]
@@ -227,18 +176,62 @@ class LLMClient:
                     return resp
                 
                 first_part = parts[0]
-                # Function Call 발생 시
+                
+                # Function Call 발생 시 2-Pass 아키텍처 수행 (Gemini 표준)
                 if "functionCall" in first_part:
                     fn_call = first_part["functionCall"]
                     fn_name = fn_call.get("name", "")
                     fn_args = fn_call.get("args", {})
                     
+                    # 1. 툴 로직 실제 실행
                     exec_result = PCAgent.execute_tool(fn_name, fn_args)
-                    resp = cls.format_action_response(pet_key, fn_name, fn_args, exec_result)
-                    PetLogger.log_pet(pet_key, resp)
-                    return resp
+                    
+                    # 2. 2-Pass Gemini API 호출 (Function Response 전달하여 펫 성격별 피드백 대사 자동 수신)
+                    contents.append({
+                        "role": "model",
+                        "parts": [first_part]
+                    })
+                    contents.append({
+                        "role": "user",
+                        "parts": [
+                            {
+                                "functionResponse": {
+                                    "name": fn_name,
+                                    "response": {
+                                        "name": fn_name,
+                                        "output": {"result": exec_result}
+                                    }
+                                }
+                            }
+                        ]
+                    })
+
+                    pass2_payload = {
+                        "systemInstruction": {
+                            "parts": [{"text": system_instruction}]
+                        },
+                        "contents": contents,
+                        "tools": cls.TOOLS_DECLARATION,
+                        "generationConfig": {
+                            "temperature": 0.7,
+                            "maxOutputTokens": 300
+                        }
+                    }
+
+                    res2 = requests.post(url, headers=headers, json=pass2_payload, timeout=15)
+                    if res2.status_code == 200:
+                        data2 = res2.json()
+                        parts2 = data2.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                        if parts2 and "text" in parts2[0]:
+                            resp2 = parts2[0]["text"].strip()
+                            PetLogger.log_pet(pet_key, resp2)
+                            return resp2
+
+                    # 2-Pass 응답 실패 시 폴백
+                    PetLogger.log_pet(pet_key, exec_result)
+                    return exec_result
                 
-                # 텍스트 응답 시
+                # 일반 텍스트 응답 시
                 elif "text" in first_part:
                     resp = first_part["text"].strip()
                     PetLogger.log_pet(pet_key, resp)
@@ -260,5 +253,3 @@ class LLMClient:
             errMsg = f"통신에 약간 차질이 생겼어. ({str(e)})"
             PetLogger.log_error(errMsg)
             return errMsg
-
-
