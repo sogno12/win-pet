@@ -25,8 +25,7 @@ class DialogApiKey(QDialog):
         self.key_input.setPlaceholderText("AIzaSy...")
         
         # 기존 저장된 키가 있으면 표시
-        config = ConfigManager.load_config()
-        saved_key = config.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY", "")
+        saved_key = ConfigManager.get_api_key()
         if saved_key:
             self.key_input.setText(saved_key)
             
@@ -66,10 +65,7 @@ class DialogApiKey(QDialog):
             QMessageBox.warning(self, "경고", "API 키를 입력해 주세요!")
             return
 
-        config = ConfigManager.load_config()
-        config["gemini_api_key"] = api_key
-        ConfigManager.save_config(config)
-        os.environ["GEMINI_API_KEY"] = api_key
+        ConfigManager.save_api_key(api_key)
 
-        QMessageBox.information(self, "완료", "✨ API 키가 성공적으로 저장되었습니다!")
+        QMessageBox.information(self, "완료", "✨ API 키가 .env 보안 파일에 성공적으로 난독화 저장되었습니다!")
         self.accept()

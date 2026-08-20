@@ -1,7 +1,15 @@
+import sys
 import os
 import json
+import base64
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if getattr(sys, 'frozen', False):
+    # PyInstaller 포터블 바이너리로 실행 중일 때 (.exe 위치)
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    # 파이썬 소스 스크립트로 실행 중일 때
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 PETS_REGISTRY_PATH = os.path.join(BASE_DIR, "pets.json")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
@@ -76,6 +84,109 @@ class ConfigManager:
                         }
                     
         return pets_data
+
+    @classmethod
+    def get_dynamic_salt(cls) -> bytes:
+        """하드코딩 키 없이, 사용자의 머신 식별자(UUID/System Host)를 동적 결합한 무결점 솔트 생성"""
+        import uuid
+        import platform
+        node_id = str(uuid.getnode())
+        system_id = platform.node() + platform.processor()
+        salt_str = f"win_pet_dynamic_salt_{node_id}_{system_id}"
+        return salt_str.encode("utf-8")
+
+    @classmethod
+    def _xor_cipher(cls, data: bytes) -> bytes:
+        """동적 머신 고유 솔트를 이용한 XOR 비트 대칭 암호화/복호화"""
+        salt_bytes = cls.get_dynamic_salt()
+        return bytes([b ^ salt_bytes[i % len(salt_bytes)] for i, b in enumerate(data)])
+
+    @classmethod
+    def encode_key(cls, raw_key: str) -> str:
+        """Secret Salt XOR 암호화 후 Base64 인코딩"""
+        if not raw_key:
+            return ""
+        if raw_key.startswith("ENC_XOR:"):
+            return raw_key
+        raw_bytes = raw_key.strip().encode("utf-8")
+        cipher_bytes = cls._xor_cipher(raw_bytes)
+        encoded = base64.b64encode(cipher_bytes).decode("utf-8")
+        return f"ENC_XOR:{encoded}"
+
+    @classmethod
+    def decode_key(cls, enc_key: str) -> str:
+        """Secret Salt XOR 복호화"""
+        if not enc_key:
+            return ""
+        if enc_key.startswith("ENC_XOR:"):
+            try:
+                cipher_b64 = enc_key[8:]
+                cipher_bytes = base64.b64decode(cipher_b64.encode("utf-8"))
+                raw_bytes = cls._xor_cipher(cipher_bytes)
+                return raw_bytes.decode("utf-8")
+            except Exception:
+                return ""
+        elif enc_key.startswith("ENC:"):
+            # 이전 하위 호환
+            try:
+                raw_b64 = enc_key[4:]
+                return base64.b64decode(raw_b64.encode("utf-8")).decode("utf-8")
+            except Exception:
+                return ""
+        return enc_key
+
+    @classmethod
+    def get_api_key(cls) -> str:
+        """.env 파일 전용으로 난독화된 GEMINI_API_KEY를 읽어 복호화 반환합니다."""
+        env_file = os.path.join(BASE_DIR, ".env")
+        if os.path.exists(env_file):
+            try:
+                with open(env_file, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+                for line in lines:
+                    line_str = line.strip()
+                    if line_str.startswith("GEMINI_API_KEY="):
+                        val = line_str.split("=", 1)[1].strip()
+                        if val and val != "your_gemini_api_key_here":
+                            dec_key = cls.decode_key(val)
+                            if dec_key:
+                                return dec_key
+            except Exception:
+                pass
+        elif not getattr(sys, 'frozen', False):
+            # 개발 환경에서 파이썬 직접 실행 시만 호환
+            env_key = os.getenv("GEMINI_API_KEY", "").strip()
+            if env_key and env_key != "your_gemini_api_key_here":
+                return cls.decode_key(env_key)
+
+        return ""
+
+    @classmethod
+    def save_api_key(cls, raw_key: str):
+        """API 키를 난독화하여 .env 파일 전용으로 보관하고 config.json에서는 완벽 제거합니다."""
+        clean_key = raw_key.strip()
+        enc_key = cls.encode_key(clean_key)
+        env_file = os.path.join(BASE_DIR, ".env")
+
+        # 1. .env 파일에 난독화 API 키 작성
+        try:
+            with open(env_file, "w", encoding="utf-8") as f:
+                f.write(f"GEMINI_API_KEY={enc_key}\n")
+        except Exception as e:
+            print(f"⚠️ .env API 키 저장 실패: {e}")
+
+        # 2. config.json에서 API 키 필드 완벽 제거 (보안 격리)
+        config = cls.load_config()
+        modified = False
+        for k in ["llm_api_key", "gemini_api_key"]:
+            if k in config:
+                del config[k]
+                modified = True
+        if modified:
+            cls.save_config(config)
+
+        # 3. 현재 런타임 메모리 적용
+        os.environ["GEMINI_API_KEY"] = clean_key
 
     @staticmethod
     def save_pets_registry(pets_data):

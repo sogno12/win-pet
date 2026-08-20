@@ -57,8 +57,8 @@ class InfoAgent:
     }
 
     @classmethod
-    def get_weather(cls, location: str = "서울") -> str:
-        """Open-Meteo 무료 API를 연동하여 실시간 날씨 정보 조회"""
+    def get_weather(cls, location: str = "서울", date_target: str = "today") -> str:
+        """Open-Meteo 무료 API를 연동하여 오늘/내일/주간 날씨 및 강수 예보 조회"""
         clean_loc = location.strip()
         coords = cls.CITY_COORDS.get(clean_loc)
         
@@ -70,12 +70,56 @@ class InfoAgent:
             lat, lon = coords
             loc_name = clean_loc
 
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true&timezone=Asia%2FTokyo"
+        # 7일간의 일간 및 시간별 기상 데이터 동시 수집
+        url = (
+            f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
+            f"&current_weather=true&hourly=precipitation_probability,rain"
+            f"&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+            f"&forecast_days=7&timezone=Asia%2FTokyo"
+        )
         
         try:
             res = requests.get(url, timeout=5)
             if res.status_code == 200:
                 data = res.json()
+                
+                # 1. 내일 날씨 요구 시 (tomorrow)
+                if date_target == "tomorrow":
+                    daily = data.get("daily", {})
+                    d_times = daily.get("time", [])
+                    if len(d_times) >= 2:
+                        tm_max = daily.get("temperature_2m_max", [])[1]
+                        tm_min = daily.get("temperature_2m_min", [])[1]
+                        tm_wcode = daily.get("weathercode", [])[1]
+                        tm_prob = daily.get("precipitation_probability_max", [])[1]
+                        tm_desc = cls.WMO_WEATHER_CODES.get(tm_wcode, "🌤️ 맑음")
+                        
+                        msg = (
+                            f"{loc_name} 내일({d_times[1]}) 날씨 정보: "
+                            f"상태는 [{tm_desc}], 최고 기온 {tm_max}°C / 최저 기온 {tm_min}°C, "
+                            f"최대 강수 확률은 {tm_prob}%입니다."
+                        )
+                        PetLogger.log_tool("get_weather", {"location": location, "date_target": date_target}, msg)
+                        return msg
+
+                # 2. 주간/주말 날씨 요구 시 (weekly)
+                elif date_target == "weekly":
+                    daily = data.get("daily", {})
+                    d_times = daily.get("time", [])
+                    d_maxs = daily.get("temperature_2m_max", [])
+                    d_mins = daily.get("temperature_2m_min", [])
+                    d_wcodes = daily.get("weathercode", [])
+                    
+                    summaries = []
+                    for i in range(min(5, len(d_times))):
+                        wdesc = cls.WMO_WEATHER_CODES.get(d_wcodes[i], "맑음")
+                        summaries.append(f"{d_times[i]}: {wdesc}({d_mins[i]}~{d_maxs[i]}°C)")
+                    
+                    msg = f"{loc_name} 향후 5일간 날씨 추이: " + " / ".join(summaries)
+                    PetLogger.log_tool("get_weather", {"location": location, "date_target": date_target}, msg)
+                    return msg
+
+                # 3. 오늘/현재 날씨 요구 시 (today - 기본값)
                 current = data.get("current_weather", {})
                 temp = current.get("temperature", "N/A")
                 wind = current.get("windspeed", "N/A")
@@ -83,8 +127,25 @@ class InfoAgent:
                 
                 weather_desc = cls.WMO_WEATHER_CODES.get(wcode, "🌤️ 맑음")
                 
-                msg = f"{loc_name} 실시간 날씨 정보: 현재 기온 {temp}°C, 상태는 [{weather_desc}], 풍속은 {wind}km/h입니다."
-                PetLogger.log_tool("get_weather", {"location": location}, msg)
+                hourly = data.get("hourly", {})
+                times = hourly.get("time", [])
+                precip_prob = hourly.get("precipitation_probability", [])
+                
+                rain_summary = ""
+                if times and precip_prob:
+                    rain_times = []
+                    # 오늘 24시간 범위 내 비 예보 체크
+                    for t, prob in zip(times[:24], precip_prob[:24]):
+                        if prob >= 40:
+                            hour_str = t.split("T")[-1] if "T" in t else t
+                            rain_times.append(f"{hour_str}(확률 {prob}%)")
+                    if rain_times:
+                        rain_summary = f" [오늘 예상 비 시간대: {', '.join(rain_times[:4])}]"
+                    else:
+                        rain_summary = " [오늘 당분간 비 예보는 없습니다]"
+
+                msg = f"{loc_name} 오늘 실시간 날씨: 현재 기온 {temp}°C, 상태 [{weather_desc}], 풍속 {wind}km/h.{rain_summary}"
+                PetLogger.log_tool("get_weather", {"location": location, "date_target": date_target}, msg)
                 return msg
             else:
                 msg = f"{loc_name} 날씨 정보를 가져오는 데 실패했습니다 (HTTP {res.status_code})."
@@ -115,7 +176,10 @@ class InfoAgent:
     def execute_tool(cls, tool_name: str, args: dict) -> str:
         """도구 이름과 인자를 받아 정보 탐색 기능을 실행합니다."""
         if tool_name == "get_weather":
-            return cls.get_weather(args.get("location", "서울"))
+            return cls.get_weather(
+                location=args.get("location", "서울"),
+                date_target=args.get("date_target", "today")
+            )
         elif tool_name == "recommend_lunch":
             return cls.recommend_lunch(args.get("category", None))
         else:

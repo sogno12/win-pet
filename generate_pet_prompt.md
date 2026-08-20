@@ -1,21 +1,21 @@
 # 이미지 생성 프롬프트
 
 1) 걷기 포즈 (Walk Frame - 옆모습 걷기)
-A super cute chibi pixel art baby {fox} walking, side profile view, walking pose(왼발을 앞으로 내딛는 포즈), on a solid magenta background (#FF00FF), standalone character, large shiny refractive eyes, cute pink cheeks, soft dimensional shading, clean pixel outline, 2D pixel illustration style matching a snowy owl desktop pet.
+A super cute chibi pixel art {fox} walking, side profile view, walking pose(왼발을 앞으로 내딛는 포즈), on a solid magenta background (#FF00FF), standalone character, large shiny refractive eyes, cute pink cheeks, soft dimensional shading, clean pixel outline, 2D pixel illustration style matching a snowy owl desktop pet.
 
-2) 걷기 포즈 (Walk Frame - 옆모습 걷기)
+1) 걷기 포즈 (Walk Frame - 옆모습 걷기)
 방금 {fox}(identical character)로, 이번엔 오른발을 앞으로 내딛는 교차 걷기 포즈 그려줘
 
-3) 대기 포즈 (Idle Frame - 정면 앉아 멍때리기)
+1) 대기 포즈 (Idle Frame - 정면 앉아 멍때리기)
 A super cute chibi pixel art {fox}(identical character) sitting facing front, front view, idle pose, on a solid magenta background (#FF00FF), standalone character, large shiny refractive eyes, cute pink cheeks, soft dimensional shading, clean pixel outline, 2D pixel illustration style.
 
-4) 기쁨 포즈 (Happy Frame - 깡총 뛰며 기뻐하기)
+1) 기쁨 포즈 (Happy Frame - 깡총 뛰며 기뻐하기)
 A super cute chibi pixel art {fox}(identical character) jumping up happily with small floating hearts, happy jumping pose, on a solid magenta background (#FF00FF), standalone character, large shiny refractive eyes, soft dimensional shading, clean pixel outline, 2D pixel illustration style.
 
-5) 기쁨 대기 포즈 (Happy Frame - 깡총 뛰며 기뻐하기)
+1) 기쁨 대기 포즈 (Happy Frame - 깡총 뛰며 기뻐하기)
 방금 {fox}(identical character)로, 땅에 앞발을 딛은 채 기뻐서 점프하기 직전 포즈 그려줘
 
-6) 매달리기 포즈 (Drag Frame - 뒷목덜미 매달림)
+1) 매달리기 포즈 (Drag Frame - 뒷목덜미 매달림)
 A super cute chibi pixel art {fox}(identical character)  suspended hanging in the air by nape, dangling pose, on a solid magenta background (#FF00FF), standalone character, large shiny refractive eyes, soft dimensional shading, clean pixel outline, 2D pixel illustration style.
 
 

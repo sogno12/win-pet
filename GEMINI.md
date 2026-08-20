@@ -74,23 +74,26 @@ python main.py                # 펫 실행
 - [x] **`config.json` 연동 최고속/최경량 LLM 모델 지정 (`gemini-3.1-flash-lite`)**
 
 **3단계: Agent 작업 & 비서/배포 확장 (진행 중 🔥)**
-- [x] **[0순위] 비개발자 배포용 환경 준비 (API 키 입력 UI & GUI 신규 펫 자동 정돈/추가 메뉴 완료!)**
-  - [x] **API 키 설정 팝업 UI:** 펫 우클릭 및 대화 시 API 키 미설정 상태 탐지 ➔ 사용자 자동 입력 팝업 UI (`ui/dialog_api_key.py`, `config.json` 저장)
+- [x] **[0순위] 비개발자 배포용 환경 준비 (API 키 입력 UI & GUI 신규 펫 자동 정돈/추가):**
+  - [x] **API 키 설정 팝업 UI:** 펫 우클릭 및 대화 시 API 키 미설정 상태 탐지 ➔ 사용자 자동 입력 팝업 UI (`ui/dialog_api_key.py`, `.env` 전용 난독화 저장)
+  - [x] **[보안 강화] API 키 .env 전용 파일 격리 보관 & Base64 난독화(`ENC:...`) 암호화 저장 시스템 완비 (`config.json` 키 필드 완벽 제거)**
+  - [x] **[개선] API 키 미설정 시 오프라인 픽셀 펫 정상 보행/상호작용 유지 & 최초 구동 시 1회 등록 안내 팝업 및 '다시 묻지 않기' (`api_key_prompted`) 플래그 완비**
   - [x] **GUI 신규 펫 자동 정돈/추가 버튼:** 우클릭 메뉴 `✨ 신규 펫 자동 정돈/추가` 클릭 ➔ `assets/` 신규 폴더 다중 감지 ➔ 수정 가능한 기본 타이틀 입력 팝업 ➔ 3단계 배경 제거 오토 파이프라인 1초 완료
 - [x] **[1순위] PC 제어 Agent (Function Calling) & 로깅 시스템 & 키워드 페르소나 엔진:**
   - [x] 유튜브 음악/영상 검색 재생, 메모장/계산기/작업관리자 앱 실행, PC 화면 잠금, 볼륨 조절/음소거 구현 ([`core/pc_agent.py`](file:///d:/sjchoi/win_pet/core/pc_agent.py))
   - [x] Gemini REST API `systemInstruction` 페이로드 분리로 Function Calling 트리거율 100% 보장 ([`core/llm_client.py`](file:///d:/sjchoi/win_pet/core/llm_client.py))
+  - [x] **[버그 수정] 메모장/앱 실행 요청 시 텍스트 시늉만 하고 실제 실행되지 않던 Function Call 미트리거 버그 완벽 수정**
   - [x] 매일 날짜별 자동 회전 로깅 시스템 구축 ([`core/logger.py`](file:///d:/sjchoi/win_pet/core/logger.py) ➔ `logs/YYYY-MM-DD.log`, `yyyy/MM/dd HH:mm:ss` 포맷 준수)
   - [x] 키워드 기반 페르소나 엔진 구축 (`pets.json` ➔ `species`, `tone`, `speech_style` 키워드 지원, [`core/persona_builder.py`](file:///d:/sjchoi/win_pet/core/persona_builder.py))
   - [x] 턴 변경 시에도 존댓말/반말이 섞이지 않는 엄격한 어미 일관성 지침 적용 완료
   - [x] Gemini 2-Pass Function Call 도입 ➔ 하드코딩 `if-else` 대사 코드 100% 완전 삭제!
-- [x] **[2순위] 실시간 정보 탐색 Agent:** Open-Meteo 실시간 기상/날씨 정보 조회 및 부담 없는 2단계 대화형 점심 메뉴 추천 연동 완료 ([`core/info_agent.py`](file:///d:/sjchoi/win_pet/core/info_agent.py))
+- [x] **[2순위] 실시간 정보 탐색 Agent:** Open-Meteo 실시간 기상/오늘·내일·주간 날씨 & 강수 예보 조회 및 부담 없는 2단계 대화형 점심 메뉴 추천 연동 완료 ([`core/info_agent.py`](file:///d:/sjchoi/win_pet/core/info_agent.py))
 - [x] **[3순위] 기억력 Agent (Memory):** 대화 타임스탬프 및 설정 가능한 세션 만료(`session_timeout_minutes`) 기반 대화 회상 시스템 연동 완료 ([`core/memory_agent.py`](file:///d:/sjchoi/win_pet/core/memory_agent.py))
   - [x] 독립된 장기기억 보관소(`long_term_memory.json`) 및 5개 표준 태그(`profile`, `preference`, `schedule`, `habit`, `relation`) 구축
   - [x] 중요도 3~5점 이상 팩트 선별 저장 및 키워드 매칭 선택적 추출(`Selective Retrieval`) 연동 완료
 - [x] **[4순위] 펫 상태 & 친밀도 (Status):** 3대 상태 지수(친밀도, 행복도, 심심함) 및 독립 보관소(`status.json`), 쓰다듬기/대화 보상 & 방치 감지, `📊 펫 상태창...` GUI 팝업 연동 완료 ([`core/status_agent.py`](file:///d:/sjchoi/win_pet/core/status_agent.py), [`ui/dialog_status.py`](file:///d:/sjchoi/win_pet/ui/dialog_status.py))
   - [x] 이미지가 없는 펫 이미지 미존재 시 `idle/` 프레임 100% 안전 폴백(Fallback) 방어 모듈 연동 완료
-- [ ] **[5순위] win_pet (무설치 포터블 패키징):** 파이썬 미설치 PC에서도 켜지는 포터블 실행기 빌드
+- [x] **[5순위] win_pet (무설치 포터블 패키징):** `build_portable.py` 구축 완료 ➔ `dist/win_pet/win_pet.exe` 원클릭 실행 파일 및 리소스/안내문 동봉 완비
 
 **4단계: 음성 (STT/TTS) 연동 (예정)**
 - [ ] **STT (Speech-To-Text):** 마이크 음성 입력 텍스트 변환 (Whisper / 윈도우 API)

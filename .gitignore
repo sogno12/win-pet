@@ -53,3 +53,8 @@ long_term_memory.json
 status.json
 config.json
 
+# PyInstaller Build Artifacts
+build/
+dist/
+*.spec
+

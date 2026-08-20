@@ -93,6 +93,9 @@ class PetWidget(QWidget):
         self.origin_center = QPoint(init_x, init_y)
         self.show()
 
+        # 💡 최초 1회 API 키 등록 안내 팝업 점검 (800ms 후)
+        QTimer.singleShot(800, self.check_first_run_api_key_prompt)
+
     def set_tray_manager(self, tray_manager):
         self.tray_manager = tray_manager
 
@@ -297,12 +300,39 @@ class PetWidget(QWidget):
                 self.origin_center = self.pos()
                 self.update_pet_image()
 
-                # 💡 드래그로 끌어다 놓은 새 위치 중심으로 안개 영역 즉시 갱신!
-                if self.is_range_overlay_always_on:
-                    self.show_boundary_overlay(self.boundary_mode)
+                # 💡 마우스로 끌어다 놓아 이동 범위가 재설정된 순간 안개 구름 미리보기 무조건 팝업!
+                self.show_boundary_overlay(self.boundary_mode)
             event.accept()
 
+    def check_first_run_api_key_prompt(self):
+        """최초 구동 시 API 키 미설정 상태라면 1회 등록 안내 팝업 표시"""
+        api_key = ConfigManager.get_api_key()
+        prompted = self.config.get("api_key_prompted", False)
+
+        if not api_key and not prompted:
+            from PyQt6.QtWidgets import QMessageBox
+            ans = QMessageBox.question(
+                self,
+                "✨ win_pet AI 서비스 안내",
+                "반가워요! 펫과 대화를 나누고 PC 제어/날씨/검색 기능을 이용하시려면 무료 Gemini API 키가 필요합니다.\n\n"
+                "지금 API 키를 등록하시겠어요?\n\n"
+                "('아니오'를 누르시면 대화 없이 픽셀 펫 모드로 얌전하게 거닐며, 나중에 우클릭 메뉴에서 언제든 등록하실 수 있습니다.)",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+
+            self.config["api_key_prompted"] = True
+            ConfigManager.save_config(self.config)
+
+            if ans == QMessageBox.StandardButton.Yes:
+                self.open_api_key_dialog()
+
     def open_dialog_input(self):
+        """펫 클릭 시 대화 입력창을 엽니다 (API 키 미설정 시 부담 없이 무반응)"""
+        api_key = ConfigManager.get_api_key()
+        if not api_key:
+            return
+
         self.state = "IDLE"
         self.update_pet_image()
         self.dialog_input.popup_near_pet()
@@ -425,7 +455,8 @@ class PetWidget(QWidget):
     def open_api_key_dialog(self):
         from ui.dialog_api_key import DialogApiKey
         dlg = DialogApiKey(self)
-        dlg.exec()
+        if dlg.exec() == DialogApiKey.DialogCode.Accepted:
+            self.config = ConfigManager.load_config()
 
     def scan_and_add_new_pets_gui(self):
         """✨ [GUI 0순위] assets/ 신규 폴더 탐지 ➔ 수정가능한 기본 이름 팝업 ➔ 3단계 배경 제거 오토 파이프라인"""

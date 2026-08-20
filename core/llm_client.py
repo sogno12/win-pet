@@ -35,13 +35,18 @@ class LLMClient:
             "functionDeclarations": [
                 {
                     "name": "get_weather",
-                    "description": "지정한 도시(서울, 부산, 인천, 대구, 광주, 대전, 울산, 수원, 제주 등)의 실시간 날씨, 현재 기온, 풍속 및 상태 정보를 조회합니다.",
+                    "description": "지정한 도시(서울, 부산, 인천, 대구, 광주, 대전, 울산, 수원, 제주 등)의 오늘/내일/주간 날씨, 기온, 강수 확률 및 상태 정보를 조회합니다.",
                     "parameters": {
                         "type": "OBJECT",
                         "properties": {
                             "location": {
                                 "type": "STRING",
                                 "description": "조회할 도시 이름 (예: 서울, 부산, 제주, 대전 등)"
+                            },
+                            "date_target": {
+                                "type": "STRING",
+                                "enum": ["today", "tomorrow", "weekly"],
+                                "description": "날씨 조회 대상 날짜 (today: 오늘/현재, tomorrow: 내일, weekly: 이번주/주말/주간)"
                             }
                         }
                     }
@@ -69,13 +74,13 @@ class LLMClient:
                 },
                 {
                     "name": "launch_app",
-                    "description": "응용 프로그램(메모장, 계산기, 그림판, 파일 탐색기, 작업관리자 등)을 실행합니다.",
+                    "description": "Windows 응용 프로그램(메모장/notepad, 계산기/calc, 그림판/mspaint, 파일탐색기/explorer, 작업관리자/taskmgr, 크롬/chrome 등)을 실제 실행합니다. 사용자가 메모장을 켜달라거나 메모/기록/저장을 위해 메모장 실행을 요청할 때 무조건 이 함수를 호출하세요.",
                     "parameters": {
                         "type": "OBJECT",
                         "properties": {
                             "app_name": {
                                 "type": "STRING",
-                                "description": "실행할 앱 이름 (예: notepad, calc, mspaint, explorer, taskmgr 등)"
+                                "description": "실행할 앱 이름 (예: 메모장, notepad, 계산기, calc, taskmgr 등)"
                             }
                         },
                         "required": ["app_name"]
@@ -209,11 +214,15 @@ class LLMClient:
                     PetLogger.log_pet(pet_key, resp)
                     return resp
                 
-                first_part = parts[0]
+                fn_part = None
+                for pt in parts:
+                    if "functionCall" in pt:
+                        fn_part = pt
+                        break
                 
                 # Function Call 발생 시 2-Pass 아키텍처 수행 (Gemini 표준)
-                if "functionCall" in first_part:
-                    fn_call = first_part["functionCall"]
+                if fn_part:
+                    fn_call = fn_part["functionCall"]
                     fn_name = fn_call.get("name", "")
                     fn_args = fn_call.get("args", {})
                     
@@ -226,7 +235,7 @@ class LLMClient:
                     # 2. 2-Pass Gemini API 호출 (Function Response 전달하여 펫 성격별 피드백 대사 자동 수신)
                     contents.append({
                         "role": "model",
-                        "parts": [first_part]
+                        "parts": [fn_part]
                     })
                     contents.append({
                         "role": "user",
@@ -255,19 +264,26 @@ class LLMClient:
                         }
                     }
 
-                    res2 = requests.post(url, headers=headers, json=pass2_payload, timeout=15)
-                    if res2.status_code == 200:
-                        data2 = res2.json()
-                        parts2 = data2.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-                        if parts2 and "text" in parts2[0]:
-                            resp2 = parts2[0]["text"].strip()
-                            PetLogger.log_pet(pet_key, resp2)
-                            MemoryAgent.save_interaction(user_query, resp2)
-                            return resp2
+                    try:
+                        res2 = requests.post(url, headers=headers, json=pass2_payload, timeout=15)
+                        if res2.status_code == 200:
+                            data2 = res2.json()
+                            parts2 = data2.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                            if parts2:
+                                for pt2 in parts2:
+                                    if "text" in pt2:
+                                        resp2 = pt2["text"].strip()
+                                        PetLogger.log_pet(pet_key, resp2)
+                                        MemoryAgent.save_interaction(user_query, resp2)
+                                        StatusAgent.interact("chat")
+                                        return resp2
+                    except Exception as e2:
+                        PetLogger.log_error(f"2-Pass Exception: {e2}")
 
-                    # 2-Pass 응답 실패 시 폴백
+                    # 2-Pass 응답 실패 시 툴 실행 결과 직관적 폴백 리턴 (예: 날씨 정보 텍스트 반환)
                     PetLogger.log_pet(pet_key, exec_result)
                     MemoryAgent.save_interaction(user_query, exec_result)
+                    StatusAgent.interact("chat")
                     return exec_result
                 
                 # 일반 텍스트 응답 시

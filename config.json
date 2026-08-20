@@ -12,5 +12,6 @@
   "range_preview_duration_ms": 1500,
   "range_overlay_show_border": true,
   "range_overlay_color": "#E6F0FF",
-  "range_overlay_opacity": 0.25
+  "range_overlay_opacity": 0.25,
+  "api_key_prompted": false
 }
