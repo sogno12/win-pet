@@ -6,6 +6,7 @@ from core.pc_agent import PCAgent
 from core.info_agent import InfoAgent
 from core.logger import PetLogger
 from core.persona_builder import PersonaBuilder
+from core.memory_agent import MemoryAgent
 
 try:
     from dotenv import load_dotenv
@@ -27,7 +28,7 @@ class LLMWorkerThread(QThread):
         self.response_received.emit(response_text)
 
 class LLMClient:
-    """Gemini LLM API 통신 및 동적 펫 키워드 페르소나 (2-Pass Function Call) 응답 생성 모듈"""
+    """Gemini LLM API 통신 및 동적 펫 키워드 페르소나 (2-Pass Function Call + Memory) 응답 생성 모듈"""
     
     TOOLS_DECLARATION = [
         {
@@ -159,7 +160,10 @@ class LLMClient:
             PetLogger.log_error(errMsg)
             return errMsg
 
-        system_instruction = PersonaBuilder.get_system_instruction(pet_key)
+        # 메모리 컨텍스트 (시간 힌트 + 대화 히스토리) 조립
+        memory_context = MemoryAgent.get_memory_context()
+        base_system_instruction = PersonaBuilder.get_system_instruction(pet_key)
+        system_instruction = f"{base_system_instruction}\n\n[펫의 시공간 대화 기억 컨텍스트]\n{memory_context}"
 
         config = ConfigManager.load_config()
         model_name = config.get("llm_model", "gemini-3.1-flash-lite").strip()
@@ -255,20 +259,24 @@ class LLMClient:
                         if parts2 and "text" in parts2[0]:
                             resp2 = parts2[0]["text"].strip()
                             PetLogger.log_pet(pet_key, resp2)
+                            MemoryAgent.save_interaction(user_query, resp2)
                             return resp2
 
                     # 2-Pass 응답 실패 시 폴백
                     PetLogger.log_pet(pet_key, exec_result)
+                    MemoryAgent.save_interaction(user_query, exec_result)
                     return exec_result
                 
                 # 일반 텍스트 응답 시
                 elif "text" in first_part:
                     resp = first_part["text"].strip()
                     PetLogger.log_pet(pet_key, resp)
+                    MemoryAgent.save_interaction(user_query, resp)
                     return resp
                 
                 resp = "답변을 정확히 이해하지 못했어요."
                 PetLogger.log_pet(pet_key, resp)
+                MemoryAgent.save_interaction(user_query, resp)
                 return resp
             else:
                 try:
@@ -283,3 +291,4 @@ class LLMClient:
             errMsg = f"통신에 약간 차질이 생겼어. ({str(e)})"
             PetLogger.log_error(errMsg)
             return errMsg
+

@@ -7,5 +7,6 @@
   "move_speed": 1,
   "move_timer_ms": 150,
   "move_boundary_mode": "MEDIUM",
-  "anim_interval_ms": 140
+  "anim_interval_ms": 140,
+  "session_timeout_minutes": 30
 }
