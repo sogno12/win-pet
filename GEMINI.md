@@ -75,7 +75,8 @@ python main.py                # 펫 실행
   - [x] 유튜브 음악/영상 검색 재생, 메모장/계산기/작업관리자 앱 실행, PC 화면 잠금, 볼륨 조절/음소거 구현 ([`core/pc_agent.py`](file:///d:/sjchoi/win_pet/core/pc_agent.py))
   - [x] Gemini REST API `systemInstruction` 페이로드 분리로 Function Calling 트리거율 100% 보장 ([`core/llm_client.py`](file:///d:/sjchoi/win_pet/core/llm_client.py))
   - [x] 매일 날짜별 자동 회전 로깅 시스템 구축 ([`core/logger.py`](file:///d:/sjchoi/win_pet/core/logger.py) ➔ `logs/YYYY-MM-DD.log`, `yyyy/MM/dd HH:mm:ss` 포맷 준수)
-  - [x] 키워드 기반 페르소나 엔진 구축 (`pets.json` ➔ `species`, `tone` 키워드 지원, [`core/persona_builder.py`](file:///d:/sjchoi/win_pet/core/persona_builder.py))
+  - [x] 키워드 기반 페르소나 엔진 구축 (`pets.json` ➔ `species`, `tone`, `speech_style` 키워드 지원, [`core/persona_builder.py`](file:///d:/sjchoi/win_pet/core/persona_builder.py))
+  - [x] 턴 변경 시에도 존댓말/반말이 섞이지 않는 엄격한 어미 일관성 지침 적용 완료
   - [x] Gemini 2-Pass Function Call 도입 ➔ 하드코딩 `if-else` 대사 코드 100% 완전 삭제!
 - [x] **[2순위] 실시간 정보 탐색 Agent:** Open-Meteo 실시간 기상/날씨 정보 조회 및 부담 없는 2단계 대화형 점심 메뉴 추천 연동 완료 ([`core/info_agent.py`](file:///d:/sjchoi/win_pet/core/info_agent.py))
 - [ ] **[3순위] 기억력 Agent (Memory):** 대화 내용 저장 및 이전 기록 회상

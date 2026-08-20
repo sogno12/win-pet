@@ -33,12 +33,16 @@ class PersonaBuilder:
 
         species = pet_info.get("species", f"{pet_key.replace('_', ' ').title()} 펫")
         tone = pet_info.get("tone", "다정하고 친절한 성격")
+        speech_style = pet_info.get("speech_style", "다정한 한국어 어투")
 
         persona_note = (
-            f"[캐릭터 정체성 설정]\n"
+            f"[캐릭터 정체성 및 말투 규격]\n"
             f"- 캐릭터 종류: {species}\n"
-            f"- 성격 및 말투 스타일: {tone}\n"
-            f"위 정체성 성격에 맞게 답변해라."
+            f"- 성격 특징: {tone}\n"
+            f"- 지정 어미 스타일: {speech_style}\n\n"
+            f"⚠️ [어미 일관성 엄격 규칙]\n"
+            f"- 답변 시 반드시 지정된 어미 스타일({speech_style})만을 100% 처음부터 끝까지 일관되게 유지하십시오.\n"
+            f"- 대화 턴이 바뀌거나 기능 툴을 실행하더라도 존댓말과 반말을 절대 섞거나 말투 연령대를 바꾸지 마십시오."
         )
 
         return f"{cls.BASE_INSTRUCTION}\n\n{persona_note}"
