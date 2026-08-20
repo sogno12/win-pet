@@ -387,6 +387,66 @@ class PetWidget(QWidget):
             pet_group.addAction(pet_action)
             pet_menu.addAction(pet_action)
 
+        pet_menu.addSeparator()
+        add_new_act = QAction("✨ 신규 펫 자동 정돈/추가...", self)
+        add_new_act.triggered.connect(self.scan_and_add_new_pets_gui)
+        pet_menu.addAction(add_new_act)
+
+    def open_api_key_dialog(self):
+        from ui.dialog_api_key import DialogApiKey
+        dlg = DialogApiKey(self)
+        dlg.exec()
+
+    def scan_and_add_new_pets_gui(self):
+        """✨ [GUI 0순위] assets/ 신규 폴더 탐지 ➔ 수정가능한 기본 이름 팝업 ➔ 3단계 배경 제거 오토 파이프라인"""
+        import os
+        from PyQt6.QtWidgets import QInputDialog, QMessageBox
+        from pet_generator import organize_and_convert_pet_pack
+        
+        assets_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
+        if not os.path.exists(assets_dir):
+            QMessageBox.warning(self, "경고", "assets/ 폴더를 찾을 수 없습니다.")
+            return
+
+        unregistered = []
+        for item in os.listdir(assets_dir):
+            item_path = os.path.join(assets_dir, item)
+            if os.path.isdir(item_path) and item not in self.pets_registry:
+                unregistered.append(item)
+
+        if not unregistered:
+            QMessageBox.information(
+                self, "안내", 
+                "ℹ️ 새로 추가할 미등록 펫 폴더가 없습니다.\n\n"
+                "새 펫을 추가하시려면 assets/ 폴더 안에 새 폴더(예: assets/my_rabbit)를 만들어 이미지를 넣은 후 이 버튼을 눌러주세요!"
+            )
+            return
+
+        added_count = 0
+        for folder_id in unregistered:
+            # 기본 디폴트 이름 생성 (수정 가능!)
+            default_display_name = f"🐾 {folder_id.replace('_', ' ').title()}"
+            
+            pet_name, ok = QInputDialog.getText(
+                self, 
+                f"✨ 신규 펫 [{folder_id}] 등록",
+                f"[{folder_id}] 펫이 탐지되었습니다!\n메뉴에 표시할 예쁜 이름을 입력해 주세요 (수정 가능):",
+                text=default_display_name
+            )
+            
+            if not ok or not pet_name.strip():
+                pet_name = default_display_name
+                
+            # 3단계 오토 파이프라인 구동
+            if organize_and_convert_pet_pack(folder_id, pet_name.strip()):
+                added_count += 1
+
+        if added_count > 0:
+            self.pets_registry = ConfigManager.load_pets_registry()
+            QMessageBox.information(self, "성공", f"🎉 {added_count}개의 신규 펫이 스마트 배경 제거 후 메뉴에 추가 등록되었습니다!")
+            if self.tray_manager:
+                self.tray_manager.update_tray_menu()
+
     def show_context_menu(self, global_pos):
         menu = QMenu(self)
         self.pets_registry = ConfigManager.load_pets_registry()
@@ -402,6 +462,10 @@ class PetWidget(QWidget):
         self.build_boundary_menu(menu)
         
         menu.addSeparator()
+        api_key_action = QAction("🔑 API 키 설정...", self)
+        api_key_action.triggered.connect(self.open_api_key_dialog)
+        menu.addAction(api_key_action)
+
         hide_action = QAction("🙈 숨기기 (트레이로)", self)
         hide_action.triggered.connect(self.hide)
         menu.addAction(hide_action)

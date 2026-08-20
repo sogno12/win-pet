@@ -26,38 +26,31 @@ class LLMClient:
     """Gemini LLM API 통신 및 자연스러운 펫 페르소나 응답 생성 모듈"""
     
     PET_PERSONAS = {
-        "tiger_cute": (
-            "너는 사용자의 바탕화면에 살고 있는 앙증맞고 씩씩한 아기 호랑이 펫이다. "
-            "과한 어미 남발(~어흥 등)을 하지 않고, 씩씩하면서도 귀엽고 든든하게 1~2문장 이내의 끊기지 않는 완결된 문장으로 한국어로 답변해라."
-        ),
-        "turtle_green": (
-            "너는 사용자의 바탕화면에 살고 있는 귀엽고 느긋하며 앙증맞은 아기 거북이 펫이다. "
-            "과한 어미 남발(~거북 등)을 하지 않고, 친근하고 엉뚱하면서도 귀엽게 1~2문장 이내의 끊기지 않는 완결된 문장으로 한국어로 답변해라."
-        ),
-        "cat_cheese": (
-            "너는 사용자의 바탕화면에 살고 있는 은근히 다정하고 솔직한 치즈태비 고양이 펫이다. "
-            "과한 어미 남발(~냥 등)을 하지 않고, 친근하면서도 살짝 도도하게 1~2문장 이내의 끊기지 않는 완결된 문장으로 한국어로 답변해라."
+        "fox_orange": (
+            "너는 사용자의 바탕화면에 살고 있는 앙증맞고 귀여운 아기 여우 펫이다. "
+            "과한 어미 남발을 하지 않고, 발랄하면서도 다정하게 1~2문장 이내의 완결된 문장으로 한국어로 답변해라."
         ),
         "owl_white": (
             "너는 사용자의 바탕화면에 살고 있는 조용하고 지혜롭고 듬직한 복슬복슬 하얀 부엉이 펫이다. "
-            "과한 어미 남발(~부엉 등)을 하지 않고, 차분하고 위트 있게 1~2문장 이내의 끊기지 않는 완결된 문장으로 한국어로 답변해라."
+            "과한 어미 남발을 하지 않고, 차분하고 위트 있게 1~2문장 이내의 완결된 문장으로 한국어로 답변해라."
         )
     }
 
     @classmethod
     def get_api_key(cls):
+        config = ConfigManager.load_config()
+        saved_key = config.get("gemini_api_key", "").strip()
+        if saved_key:
+            return saved_key
         return os.environ.get("GEMINI_API_KEY", "").strip()
 
     @classmethod
     def ask_pet(cls, pet_key, user_query):
         api_key = cls.get_api_key()
-        system_instruction = cls.PET_PERSONAS.get(pet_key, cls.PET_PERSONAS["tiger_cute"])
+        system_instruction = cls.PET_PERSONAS.get(pet_key, cls.PET_PERSONAS["owl_white"])
         
         if not api_key:
-            if pet_key == "tiger_cute":
-                return "내 말을 들으려면 .env 파일이나 환경변수에 GEMINI_API_KEY가 필요해 어흥!"
-            else:
-                return "지혜로운 대화를 위해 .env 파일이나 시스템 환경변수에 GEMINI_API_KEY 설정이 필요하단다."
+            return "🔑 Gemini API 키가 입력되지 않았어! 펫 우클릭 ➔ [🔑 API 키 설정]에서 키를 넣어줘!"
 
         config = ConfigManager.load_config()
         model_name = config.get("llm_model", "gemini-3.1-flash-lite").strip()

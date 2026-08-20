@@ -4,7 +4,7 @@ from ui.pet_widget import PetWidget
 from ui.tray_manager import TrayManager
 
 def main():
-    """win_cat 데스크톱 펫 애플리케이션 진입점"""
+    """win_pet 데스크톱 펫 애플리케이션 진입점"""
     app = QApplication(sys.argv)
     
     # 메인 펫 윈도우 생성

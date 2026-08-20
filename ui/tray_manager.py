@@ -21,7 +21,7 @@ class TrayManager:
         
         pet_info = self.pet_widget.pets_registry.get(self.pet_widget.current_pet, {})
         pet_name = pet_info.get("name", self.pet_widget.current_pet)
-        self.tray_icon.setToolTip(f"🐱 win_cat ({pet_name})")
+        self.tray_icon.setToolTip(f"🐾 win_pet ({pet_name})")
 
     def build_tray_menu(self):
         menu = QMenu()
@@ -53,6 +53,11 @@ class TrayManager:
         top_action.triggered.connect(self.pet_widget.toggle_always_on_top)
         menu.addAction(top_action)
         
+        # API 키 설정
+        api_key_action = QAction("🔑 API 키 설정...", self.pet_widget)
+        api_key_action.triggered.connect(self.pet_widget.open_api_key_dialog)
+        menu.addAction(api_key_action)
+
         # 7. 숨기기 / 보이기 토글
         if self.pet_widget.isVisible():
             toggle_action = QAction("🙈 숨기기", self.pet_widget)
