@@ -5,7 +5,7 @@ from PyQt6.QtGui import QPixmap, QTransform
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class AssetLoader:
-    """펫 에셋(walk, idle, drag, happy, special) 로드 및 QPixmap 캐싱 클래스"""
+    """펫 에셋(walk, idle, drag, happy, special) 전용 로딩 및 캐싱 클래스"""
     
     @staticmethod
     def _load_folder_frames(folder_path, width, height):
@@ -42,8 +42,8 @@ class AssetLoader:
         
         pet_dir = os.path.join(BASE_DIR, "assets", pet_key)
         if not os.path.exists(pet_dir):
-            pet_dir = os.path.join(BASE_DIR, "assets", "cat_cheese")
-            
+            pet_dir = os.path.join(BASE_DIR, "assets", "owl_white")
+
         # (1) walk
         walk_dir = os.path.join(pet_dir, "walk")
         w_r, w_l = cls._load_folder_frames(walk_dir, width, height)
@@ -92,3 +92,20 @@ class AssetLoader:
         anim_frames["special_l"] = s_l if s_l else w_l
 
         return anim_frames
+
+    @classmethod
+    def get_icon_pixmap(cls, pet_key):
+        pet_dir = os.path.join(BASE_DIR, "assets", pet_key)
+        idle_dir = os.path.join(pet_dir, "idle")
+        if os.path.exists(idle_dir):
+            files = sorted([f for f in os.listdir(idle_dir) if f.endswith((".png", ".jpg"))])
+            if files:
+                return QPixmap(os.path.join(idle_dir, files[0]))
+        walk_dir = os.path.join(pet_dir, "walk")
+        if os.path.exists(walk_dir):
+            files = sorted([f for f in os.listdir(walk_dir) if f.endswith((".png", ".jpg"))])
+            if files:
+                return QPixmap(os.path.join(walk_dir, files[0]))
+        fallback = QPixmap(32, 32)
+        fallback.fill(Qt.GlobalColor.transparent)
+        return fallback

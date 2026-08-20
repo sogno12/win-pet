@@ -1,10 +1,10 @@
 {
-  "cat_cheese": {
-    "name": "🧀 치즈태비 고양이",
+  "owl_white": {
+    "name": "🦉 복슬복슬 하얀 부엉이 (HD)",
     "enabled": true
   },
-  "owl_white": {
-    "name": "🦉 헤드위그 하얀 부엉이",
+  "fox_orange": {
+    "name": "🦊 주황 아기 여우",
     "enabled": true
   }
 }

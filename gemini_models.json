@@ -1,0 +1,19 @@
+{
+  "description": "Google Gemini 공식 모델 엔드포인트 참고용 참조 목록",
+  "recommended_lowest_lite": "gemini-3.1-flash-lite",
+  "models": {
+    "Gemini 3.1 Flash-Lite (최저 사양 / 최고속 추천)": "gemini-3.1-flash-lite",
+    "Gemini 2.5 Flash": "gemini-2.5-flash",
+    "Gemini 3.5 Flash": "gemini-3.5-flash",
+    "Gemini 3 Flash": "gemini-3-flash-preview",
+    "Gemini 3.1 Pro": "gemini-3.1-pro-preview",
+    "Nano Banana 2 (이미지)": "gemini-3.1-flash-image",
+    "Nano Banana 2 Lite (이미지)": "gemini-3.1-flash-lite-image",
+    "Nano Banana Pro (이미지)": "gemini-3-pro-image",
+    "Gemini 3.5 Live Translate": "gemini-3.5-live-translate-preview",
+    "Gemini 3.1 Flash Live": "gemini-3.1-flash-live-preview",
+    "Gemini 3.1 Flash TTS": "gemini-3.1-flash-tts-preview",
+    "Gemini 2.5 Flash Live": "gemini-2.5-flash-native-audio-preview-12-2025",
+    "Gemini 2.5 Flash TTS": "gemini-2.5-preview-tts"
+  }
+}

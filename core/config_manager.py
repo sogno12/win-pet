@@ -4,33 +4,44 @@ import json
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 PETS_REGISTRY_PATH = os.path.join(BASE_DIR, "pets.json")
+ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
 DEFAULT_CONFIG = {
-    "current_pet": "cat_cheese",
+    "current_pet": "owl_white",
+    "llm_model": "gemini-3.1-flash-lite",
     "pet_width": 48,
     "pet_height": 48,
     "is_always_on_top": True,
     "move_speed": 1,
+    "move_timer_ms": 70,
+    "move_boundary_mode": "MEDIUM",
     "anim_interval_ms": 140
 }
 
 DEFAULT_PETS = {
-    "cat_cheese": {"name": "🧀 치즈태비 고양이", "enabled": True},
-    "owl_white": {"name": "🦉 헤드위그 하얀 부엉이", "enabled": True}
+    "owl_white": {"name": "🦉 복슬복슬 하얀 부엉이 (HD)", "enabled": True}
 }
 
 class ConfigManager:
-    """설정 데이터 및 펫 메타데이터 레지스트리 총괄 클래스"""
+    """설정 데이터 및 펫 레지스트리 관리 클래스 (임시 분할 코드 전면 제거 완료)"""
     
     @staticmethod
     def load_config():
+        config = DEFAULT_CONFIG.copy()
         if os.path.exists(CONFIG_PATH):
             try:
                 with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                    return {**DEFAULT_CONFIG, **json.load(f)}
+                    loaded = json.load(f)
+                    config.update(loaded)
             except Exception as e:
                 print(f"⚠️ 설정 로드 실패, 기본값 사용: {e}")
-        return DEFAULT_CONFIG.copy()
+                
+        deprecated_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash"]
+        if config.get("llm_model") in deprecated_models:
+            config["llm_model"] = "gemini-3.1-flash-lite"
+            ConfigManager.save_config(config)
+            
+        return config
 
     @staticmethod
     def save_config(config):
@@ -41,9 +52,9 @@ class ConfigManager:
         except Exception as e:
             print(f"❌ 설정 저장 실패: {e}")
 
-    @staticmethod
-    def load_pets_registry():
-        """pets.json을 읽고, assets/ 폴더의 신규 펫을 동적 스캔하여 자동 등록"""
+    @classmethod
+    def load_pets_registry(cls):
+        """pets.json 레지스트리 데이터를 깔끔하고 빠르게 읽어오는 정갈한 로더"""
         pets_data = DEFAULT_PETS.copy()
         if os.path.exists(PETS_REGISTRY_PATH):
             try:
@@ -53,17 +64,18 @@ class ConfigManager:
             except Exception as e:
                 print(f"⚠️ pets.json 로드 실패: {e}")
 
-        assets_dir = os.path.join(BASE_DIR, "assets")
-        if os.path.exists(assets_dir):
-            for item in os.listdir(assets_dir):
-                item_path = os.path.join(assets_dir, item)
-                if os.path.isdir(item_path) and item not in pets_data:
-                    pets_data[item] = {
-                        "name": f"🐾 {item}",
-                        "enabled": True
-                    }
+        # assets/ 폴더 내에 실재하는 펫만 동적 검증
+        if os.path.exists(ASSETS_DIR):
+            for item in os.listdir(ASSETS_DIR):
+                item_path = os.path.join(ASSETS_DIR, item)
+                if os.path.isdir(item_path):
+                    walk_dir = os.path.join(item_path, "walk")
+                    if os.path.exists(walk_dir) and item not in pets_data:
+                        pets_data[item] = {
+                            "name": f"🐾 {item.replace('_', ' ').title()}",
+                            "enabled": True
+                        }
                     
-        ConfigManager.save_pets_registry(pets_data)
         return pets_data
 
     @staticmethod
