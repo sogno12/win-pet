@@ -94,13 +94,25 @@ python main.py                # 펫 실행
 - [x] **[4순위] 🚀 윈도우 시작 시 자동 실행 (Start with Windows):** 레지스트리(`HKCU\...\Run`) 자동 등록 및 우클릭 토글 메뉴 연동 완료 ([`core/config_manager.py`](file:///d:/sjchoi/win_pet/core/config_manager.py))
 - [x] **[5순위] ⏰ 1회성 타이머 & 반복 포모도로(Pomodoro) 스케줄러:** 
   - [x] 대화 연동 (`set_timer`, `start_pomodoro`, `stop_pomodoro`) 및 백그라운드 1초 카운트다운 ([`core/schedule_agent.py`](file:///d:/sjchoi/win_pet/core/schedule_agent.py))
+  - [x] 특정 시각("5시 5분") 00초 정각 맞춤 알람 (`17:05:00`) 및 유저 클릭 확인 시까지 알림 영구 유지 (`duration_ms=0`) 적용
   - [x] 집중(25분) ➔ 휴식(5분) ➔ 집중 반복 사이클 및 펫 말풍선/행복 포즈(`happy/`) 시각 알림
   - [x] 우클릭 `⏰ 펫 타이머 / 포모도로...` GUI 팝업 UI 완비 ([`ui/dialog_timer.py`](file:///d:/sjchoi/win_pet/ui/dialog_timer.py))
 - [x] **[4순위] 펫 상태 & 친밀도 (Status):** 3대 상태 지수(친밀도, 행복도, 심심함) 및 독립 보관소(`status.json`), 쓰다듬기/대화 보상 & 방치 감지, `📊 펫 상태창...` GUI 팝업 연동 완료 ([`core/status_agent.py`](file:///d:/sjchoi/win_pet/core/status_agent.py), [`ui/dialog_status.py`](file:///d:/sjchoi/win_pet/ui/dialog_status.py))
   - [x] 이미지가 없는 펫 이미지 미존재 시 `idle/` 프레임 100% 안전 폴백(Fallback) 방어 모듈 연동 완료
 - [x] **[5순위] win_pet (무설치 포터블 패키징):** `build_portable.py` 구축 완료 ➔ `dist/win_pet/win_pet.exe` 원클릭 실행 파일 및 리소스/안내문 동봉 완비
 
-**4단계: 음성 (STT/TTS) 연동 (예정)**
+**4단계: 음성 (STT/TTS) 연동 및 신규 TODO 기능 목록**
+
+### 💡 향후 개발 TODO 목록 (우선 개발 예정)
+
+- [ ] **[TODO-1] 🛑 PC 앱 종료 Agent (`close_app` 도구 연동)**:
+  - 사용자가 *"카카오톡 끄기/종료해줘"*, *"메모장 닫아줘"*, *"크롬 브라우저 닫아줘"* 라고 요청 시 실행 중인 프로세스(카카오톡 `KakaoTalk.exe`, 메모장 `notepad.exe` 등)를 정밀 조치/종료하는 `close_app` 도구 확장.
+- [ ] **[TODO-2] 📅 오늘의 일정 등록 및 아침 브리핑 Agent**:
+  - *"오늘 일정 알려줘"*, *"내일 오후 3시 미팅 등록해줘"* 기능 및 아침 펫 소환 시 오늘 스케줄 브리핑 기능.
+- [ ] **[TODO-3] 🎮 펫 퀴즈/미션 & 🎵 백그라운드 Lo-Fi BGM 플레이어**:
+  - 심심함 해소 상식 퀴즈/습관 미션 및 집중용 백그라운드 음악 재생 연동.
+
+**기타 확장 계획:**
 - [ ] **STT (Speech-To-Text):** 마이크 음성 입력 텍스트 변환 (Whisper / 윈도우 API)
 - [ ] **TTS (Text-To-Speech):** 펫의 대답을 귀여운 음성으로 출력 (Edge-TTS / ElevenLabs)
 
