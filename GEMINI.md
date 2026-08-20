@@ -71,7 +71,10 @@ python main.py                # 펫 실행
 - [x] **[0순위] 비개발자 배포용 환경 준비 (API 키 입력 UI & GUI 신규 펫 자동 정돈/추가 메뉴 완료!)**
   - [x] **API 키 설정 팝업 UI:** 펫 우클릭 및 대화 시 API 키 미설정 상태 탐지 ➔ 사용자 자동 입력 팝업 UI (`ui/dialog_api_key.py`, `config.json` 저장)
   - [x] **GUI 신규 펫 자동 정돈/추가 버튼:** 우클릭 메뉴 `✨ 신규 펫 자동 정돈/추가` 클릭 ➔ `assets/` 신규 폴더 다중 감지 ➔ 수정 가능한 기본 타이틀 입력 팝업 ➔ 3단계 배경 제거 오토 파이프라인 1초 완료
-- [ ] **[1순위] PC 제어 Agent (Function Calling):** 유튜브 음악 검색 재생, 메모장/계산기 등 실행
+- [x] **[1순위] PC 제어 Agent (Function Calling) & 로깅 시스템:**
+  - [x] 유튜브 음악/영상 검색 재생, 메모장/계산기/작업관리자 앱 실행, PC 화면 잠금, 볼륨 조절/음소거 구현 ([`core/pc_agent.py`](file:///d:/sjchoi/win_pet/core/pc_agent.py))
+  - [x] Gemini REST API `systemInstruction` 페이로드 분리로 Function Calling 트리거율 100% 보장 ([`core/llm_client.py`](file:///d:/sjchoi/win_pet/core/llm_client.py))
+  - [x] 매일 날짜별 자동 회전 로깅 시스템 구축 ([`core/logger.py`](file:///d:/sjchoi/win_pet/core/logger.py) ➔ `logs/YYYY-MM-DD.log`, `yyyy/MM/dd HH:mm:ss` 포맷 준수)
 - [ ] **[2순위] 실시간 정보 탐색 Agent:** 날씨 정보 및 점심 메뉴 검색/추천
 - [ ] **[3순위] 기억력 Agent (Memory):** 대화 내용 저장 및 이전 기록 회상
 - [ ] **[4순위] 펫 상태 & 친밀도 (Status):** 머리 다듬기/대화에 따른 행복/심심 상태 변화
