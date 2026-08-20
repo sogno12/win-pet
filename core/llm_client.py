@@ -254,10 +254,13 @@ class LLMClient:
                     return resp
                 
                 fn_part = None
+                text_part = None
                 for pt in parts:
                     if "functionCall" in pt:
                         fn_part = pt
                         break
+                    elif "text" in pt and not text_part:
+                        text_part = pt
                 
                 # Function Call 발생 시 2-Pass 아키텍처 수행 (Gemini 표준)
                 if fn_part:
@@ -329,8 +332,8 @@ class LLMClient:
                     return exec_result
                 
                 # 일반 텍스트 응답 시
-                elif "text" in first_part:
-                    resp = first_part["text"].strip()
+                elif text_part:
+                    resp = text_part["text"].strip()
                     
                     # 🚨 [행동 세이프티 가드] LLM이 말로만 "검색창을 띄워드릴게요", "메모장을 엽니다" 대사를 치고
                     # 툴을 안 부른 경우, 시스템이 키워드를 자동 감지하여 100% 실시간 강제 브라우저/앱 실행!
