@@ -37,24 +37,53 @@ class ScheduleAgent(QObject):
         self.clock.timeout.connect(self._on_tick)
         self.clock.start()
 
-    def add_timer(self, minutes: float, memo: str = "타이머") -> str:
-        """1회성 타이머 추가"""
-        secs = int(minutes * 60)
-        if secs <= 0:
-            secs = 10
+    def add_timer(self, minutes: float = 0, memo: str = "타이머", target_time_str: str = "") -> str:
+        """1회성 타이머 또는 00초 정각 시각 알람 추가"""
+        import datetime
+        now_dt = datetime.datetime.now()
+        target_dt = None
         
-        end_time = time.time() + secs
+        # 1. target_time_str (예: "17:05", "5:05", "05:05:00") 파싱
+        if target_time_str and target_time_str.strip():
+            clean_str = target_time_str.strip().replace("시", ":").replace("분", "").replace(" ", "")
+            parts = clean_str.split(":")
+            if len(parts) >= 2:
+                try:
+                    hr = int(parts[0])
+                    mn = int(parts[1])
+                    sc = int(parts[2]) if len(parts) >= 3 else 0
+                    
+                    target_dt = now_dt.replace(hour=hr, minute=mn, second=sc, microsecond=0)
+                    if target_dt <= now_dt:
+                        # 이미 지난 시각인 경우 내일 해당 시각으로 설정
+                        target_dt += datetime.timedelta(days=1)
+                except Exception:
+                    target_dt = None
+
+        if target_dt:
+            end_time = target_dt.timestamp()
+            time_display = target_dt.strftime("%H:%M:%S")
+            msg = f"⏰ [{memo}] {time_display} 정각 알람이 설정되었어요!"
+        else:
+            secs = int(minutes * 60)
+            if secs <= 0:
+                secs = 10
+            end_time = time.time() + secs
+            m, s = divmod(secs, 60)
+            if m > 0:
+                msg = f"⏰ [{memo}] {m}분 {s}초 후 타이머가 설정되었어요!"
+            else:
+                msg = f"⏰ [{memo}] {s}초 후 타이머가 설정되었어요!"
+
         timer_id = f"timer_{int(time.time()*1000)}"
-        
         self.timers.append({
             "id": timer_id,
             "memo": memo,
             "end_time": end_time,
-            "initial_seconds": secs
+            "initial_seconds": int(end_time - time.time())
         })
         
-        msg = f"⏰ [{memo}] {int(minutes)}분 타이머가 설정되었어요!"
-        PetLogger.log_tool("add_timer", {"minutes": minutes, "memo": memo}, msg)
+        PetLogger.log_tool("add_timer", {"minutes": minutes, "target_time": target_time_str, "memo": memo}, msg)
         return msg
 
     def cancel_timer(self, timer_id: str) -> str:
@@ -188,9 +217,10 @@ class ScheduleAgent(QObject):
     def execute_tool(cls, tool_name: str, args: dict) -> str:
         inst = cls.get_instance()
         if tool_name == "set_timer":
-            minutes = args.get("minutes", 1)
+            minutes = args.get("minutes", 0)
             memo = args.get("memo", "알림")
-            return inst.add_timer(minutes, memo)
+            target_time_str = args.get("target_time_str", "")
+            return inst.add_timer(minutes=minutes, memo=memo, target_time_str=target_time_str)
         elif tool_name == "start_pomodoro":
             work_m = args.get("work_minutes", 25)
             rest_m = args.get("rest_minutes", 5)

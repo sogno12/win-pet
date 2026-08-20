@@ -145,20 +145,23 @@ class LLMClient:
                 },
                 {
                     "name": "set_timer",
-                    "description": "일회성 타이머/알람을 설정합니다. (예: 10분 뒤 알림, 30분 타이머 설정)",
+                    "description": "일회성 타이머 또는 특정 시각 알람(예: 5시 5분 알람, 17:05 알람, 10분 뒤 타이머)을 설정합니다.",
                     "parameters": {
                         "type": "OBJECT",
                         "properties": {
                             "minutes": {
                                 "type": "NUMBER",
-                                "description": "타이머 분 시간 (예: 5, 10, 30, 60)"
+                                "description": "상대적 타이머 분 시간 (예: 5, 10, 30, 60). 특정 시각 알람일 경우 0 설정 가능"
+                            },
+                            "target_time_str": {
+                                "type": "STRING",
+                                "description": "특정 알람 시각 (예: '17:05', '05:05', '07:30'). 특정 시각 언급 시 반드시 입력!"
                             },
                             "memo": {
                                 "type": "STRING",
                                 "description": "타이머 내용 또는 메모 (예: 약 먹기, 찌개 끄기, 알림 등)"
                             }
-                        },
-                        "required": ["minutes"]
+                        }
                     }
                 },
                 {

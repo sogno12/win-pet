@@ -295,6 +295,10 @@ class PetWidget(QWidget):
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
+            if self.speech_bubble.isVisible():
+                self.speech_bubble.hide_bubble()
+                self.state = "IDLE"
+                self.update_pet_image()
             if not self.is_dragging:
                 from core.status_agent import StatusAgent
                 StatusAgent.interact("pat")
@@ -517,7 +521,8 @@ class PetWidget(QWidget):
     def _on_schedule_timer_triggered(self, timer_id, memo):
         self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
         self.update_pet_image()
-        self.speech_bubble.show_message(f"⏰ [알림] '{memo}' 시간이 다 되었어요!", duration_ms=10000)
+        # duration_ms=0: 유저가 클릭으로 확인할 때까지 영구 표시
+        self.speech_bubble.show_message(f"⏰ [알림] '{memo}' 시간이 다 되었어요! (클릭하여 확인)", duration_ms=0)
 
     def _on_pomodoro_phase_changed(self, phase, msg, cycle_count, remaining_secs):
         if phase == "REST_START":
@@ -527,7 +532,8 @@ class PetWidget(QWidget):
         elif phase == "STOPPED":
             self.state = "IDLE"
         self.update_pet_image()
-        self.speech_bubble.show_message(msg, duration_ms=10000)
+        # duration_ms=0: 유저가 클릭으로 확인할 때까지 영구 표시
+        self.speech_bubble.show_message(f"{msg} (클릭하여 확인)", duration_ms=0)
 
     def open_timer_dialog(self):
         from ui.dialog_timer import DialogTimer

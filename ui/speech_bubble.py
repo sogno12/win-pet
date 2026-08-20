@@ -69,9 +69,10 @@ class SpeechBubble(QWidget):
             self.label.setText(self.full_text[:self.current_idx])
             self._update_size_and_position()
         else:
-            # 💡 타이핑이 완전히 완료된 직후부터 hide_timer 카운트다운 시작! (중간 끊김 차단)
+            # 💡 타이핑이 완전히 완료된 직후부터 hide_timer 카운트다운 시작 (duration_ms <= 0 일 경우 클릭 시까지 영구 유지)
             self.typing_timer.stop()
-            self.hide_timer.start(self.duration_ms)
+            if self.duration_ms > 0:
+                self.hide_timer.start(self.duration_ms)
 
     def _update_size_and_position(self):
         self.label.adjustSize()
