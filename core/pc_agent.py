@@ -82,6 +82,16 @@ class PCAgent:
         return msg
 
     @classmethod
+    def search_google(cls, query: str) -> str:
+        """구글에서 키워드로 검색하여 웹 브라우저로 엽니다."""
+        encoded = quote(query.strip())
+        url = f"https://www.google.com/search?q={encoded}"
+        webbrowser.open(url)
+        msg = f"구글에서 '{query}' 검색 결과를 웹 브라우저로 열었습니다."
+        PetLogger.log_tool("search_google", {"query": query}, msg)
+        return msg
+
+    @classmethod
     def open_website(cls, url_or_query: str) -> str:
         """웹사이트 URL을 열거나 구글 검색을 수행합니다."""
         target = url_or_query.strip()
@@ -92,9 +102,7 @@ class PCAgent:
             webbrowser.open(f"https://{target}")
             msg = f"웹사이트 'https://{target}'(으)로 이동했습니다."
         else:
-            encoded = quote(target)
-            webbrowser.open(f"https://www.google.com/search?q={encoded}")
-            msg = f"구글에서 '{target}' 검색 결과를 열었습니다."
+            return cls.search_google(target)
         PetLogger.log_tool("open_website", {"url_or_query": url_or_query}, msg)
         return msg
 
@@ -135,6 +143,8 @@ class PCAgent:
             return cls.launch_app(args.get("app_name", ""))
         elif tool_name == "search_youtube":
             return cls.search_youtube(args.get("query", ""))
+        elif tool_name == "search_google":
+            return cls.search_google(args.get("query", args.get("url_or_query", "")))
         elif tool_name == "open_website":
             return cls.open_website(args.get("url_or_query", ""))
         elif tool_name == "adjust_volume":

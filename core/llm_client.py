@@ -31,14 +31,12 @@ class LLMClient:
         "fox_orange": (
             "너는 사용자의 바탕화면에 살고 있는 앙증맞고 귀여운 아기 여우 펫이다. "
             "과한 어미 남발을 하지 않고, 발랄하면서도 다정하게 1~2문장 이내의 완결된 문장으로 한국어로 답변해라. "
-            "사용자가 PC 제어(화면 잠금, 프로그램 실행, 볼륨 조절, 유튜브/웹 검색 등)를 원하면 텍스트로만 흉내 내지 말고 반드시 제공된 도구(Tools)를 호출해라. "
-            "만약 사용자가 할 수 있는 기능이나 역할을 물어보면 화면 잠금(🔒), 메모장/계산기/그림판/탐색기/작업관리자 실행(🚀), 유튜브 검색/재생(🎵), 구글/웹 검색(🌐), 볼륨/음소거 조절(🔊)이 가능하다고 앙증맞게 안내해라."
+            "사용자가 정보 검색, 구글 검색, 정보 조회(예: '고야전 검색', '뉴스 검색', '검색해줘') 등을 부탁하면 텍스트로만 '검색해 드릴게요'라고 대답하지 말고 반드시 search_google 또는 search_youtube 도구(Tools)를 즉시 호출해라."
         ),
         "owl_white": (
             "너는 사용자의 바탕화면에 살고 있는 조용하고 지혜롭고 듬직한 복슬복슬 하얀 부엉이 펫이다. "
             "과한 어미 남발을 하지 않고, 차분하고 위트 있게 1~2문장 이내의 완결된 문장으로 한국어로 답변해라. "
-            "사용자가 PC 제어(화면 잠금, 프로그램 실행, 볼륨 조절, 유튜브/웹 검색 등)를 원하면 텍스트로만 흉내 내지 말고 반드시 제공된 도구(Tools)를 호출해라. "
-            "만약 사용자가 할 수 있는 기능이나 역할을 물어보면 화면 잠금(🔒), 메모장/계산기/그림판/탐색기/작업관리자 실행(🚀), 유튜브 검색/재생(🎵), 구글/웹 검색(🌐), 볼륨/음소거 조절(🔊)을 도울 수 있다고 차분하고 듬직하게 안내해라."
+            "사용자가 정보 검색, 구글 검색, 정보 조회(예: '고야전 검색', '뉴스 검색', '검색해줘') 등을 부탁하면 텍스트로만 '검색해 드릴게요'라고 대답하지 말고 반드시 search_google 또는 search_youtube 도구(Tools)를 즉시 호출해라."
         )
     }
 
@@ -82,14 +80,28 @@ class LLMClient:
                     }
                 },
                 {
+                    "name": "search_google",
+                    "description": "구글(Google)에서 검색어로 정보(전시회, 뉴스, 맛집, 키워드 등)를 검색하여 웹 브라우저로 검색 결과 페이지를 엽니다.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "query": {
+                                "type": "STRING",
+                                "description": "구글에서 검색할 검색 키워드 (예: 고야전, 오늘 날씨 등)"
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                },
+                {
                     "name": "open_website",
-                    "description": "웹사이트 주소를 열거나 지정한 검색어로 구글 검색을 수행합니다.",
+                    "description": "지정한 웹사이트 URL 주소(예: naver.com, google.com 등)를 웹 브라우저로 엽니다.",
                     "parameters": {
                         "type": "OBJECT",
                         "properties": {
                             "url_or_query": {
                                 "type": "STRING",
-                                "description": "방문할 웹사이트 URL 또는 검색어"
+                                "description": "방문할 웹사이트 URL 주소"
                             }
                         },
                         "required": ["url_or_query"]
@@ -135,6 +147,9 @@ class LLMClient:
             elif tool_name == "search_youtube":
                 query = args.get("query", "")
                 return f"{prefix}유튜브에서 '{query}'(을)를 찾아 웹 브라우저로 띄워드렸어요! 🎵"
+            elif tool_name == "search_google":
+                query = args.get("query", args.get("url_or_query", ""))
+                return f"{prefix}구글에서 '{query}' 검색 결과를 브라우저로 빠르게 띄웠어요! 🌐"
             elif tool_name == "open_website":
                 target = args.get("url_or_query", "")
                 return f"{prefix}'{target}' 페이지를 신나게 열었어요! 🌐"
@@ -150,9 +165,12 @@ class LLMClient:
             elif tool_name == "search_youtube":
                 query = args.get("query", "")
                 return f"{prefix}유튜브에서 '{query}' 검색 결과를 띄워드렸습니다. 🎵"
+            elif tool_name == "search_google":
+                query = args.get("query", args.get("url_or_query", ""))
+                return f"{prefix}구글에서 '{query}' 검색 결과를 브라우저로 띄워드렸습니다. 🌐"
             elif tool_name == "open_website":
                 target = args.get("url_or_query", "")
-                return f"{prefix}'{target}' 검색 및 브라우저 열기를 완료했습니다. 🌐"
+                return f"{prefix}'{target}' 웹사이트 접속을 완료했습니다. 🌐"
             elif tool_name == "adjust_volume":
                 return f"{prefix}시스템 볼륨 설정을 성공적으로 변경했습니다. 🔊"
         return f"{prefix}{result_msg}"
