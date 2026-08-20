@@ -77,7 +77,7 @@ python main.py                # 펫 실행
   - [x] 매일 날짜별 자동 회전 로깅 시스템 구축 ([`core/logger.py`](file:///d:/sjchoi/win_pet/core/logger.py) ➔ `logs/YYYY-MM-DD.log`, `yyyy/MM/dd HH:mm:ss` 포맷 준수)
   - [x] 키워드 기반 페르소나 엔진 구축 (`pets.json` ➔ `species`, `tone` 키워드 지원, [`core/persona_builder.py`](file:///d:/sjchoi/win_pet/core/persona_builder.py))
   - [x] Gemini 2-Pass Function Call 도입 ➔ 하드코딩 `if-else` 대사 코드 100% 완전 삭제!
-- [ ] **[2순위] 실시간 정보 탐색 Agent:** 날씨 정보 및 점심 메뉴 검색/추천
+- [x] **[2순위] 실시간 정보 탐색 Agent:** Open-Meteo 실시간 기상/날씨 정보 조회 및 부담 없는 2단계 대화형 점심 메뉴 추천 연동 완료 ([`core/info_agent.py`](file:///d:/sjchoi/win_pet/core/info_agent.py))
 - [ ] **[3순위] 기억력 Agent (Memory):** 대화 내용 저장 및 이전 기록 회상
 - [ ] **[4순위] 펫 상태 & 친밀도 (Status):** 머리 다듬기/대화에 따른 행복/심심 상태 변화
 - [ ] **[5순위] win_pet (무설치 포터블 패키징):** 파이썬 미설치 PC에서도 켜지는 포터블 실행기 빌드

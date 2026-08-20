@@ -3,6 +3,7 @@ import requests
 from PyQt6.QtCore import QThread, pyqtSignal
 from core.config_manager import ConfigManager
 from core.pc_agent import PCAgent
+from core.info_agent import InfoAgent
 from core.logger import PetLogger
 from core.persona_builder import PersonaBuilder
 
@@ -31,6 +32,32 @@ class LLMClient:
     TOOLS_DECLARATION = [
         {
             "functionDeclarations": [
+                {
+                    "name": "get_weather",
+                    "description": "지정한 도시(서울, 부산, 인천, 대구, 광주, 대전, 울산, 수원, 제주 등)의 실시간 날씨, 현재 기온, 풍속 및 상태 정보를 조회합니다.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "location": {
+                                "type": "STRING",
+                                "description": "조회할 도시 이름 (예: 서울, 부산, 제주, 대전 등)"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "recommend_lunch",
+                    "description": "점심 또는 저녁 식사 메뉴(한식, 중식, 일식, 양식, 분식 등)를 다양하게 추천합니다.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "category": {
+                                "type": "STRING",
+                                "description": "원하는 음식 카테고리 (한식, 중식, 일식, 양식, 분식 중 선택, 또는 생략)"
+                            }
+                        }
+                    }
+                },
                 {
                     "name": "lock_pc",
                     "description": "Windows PC 화면을 잠금 상태로 전환합니다.",
@@ -183,8 +210,11 @@ class LLMClient:
                     fn_name = fn_call.get("name", "")
                     fn_args = fn_call.get("args", {})
                     
-                    # 1. 툴 로직 실제 실행
-                    exec_result = PCAgent.execute_tool(fn_name, fn_args)
+                    # 1. 툴 로직 실제 실행 (InfoAgent / PCAgent)
+                    if fn_name in ["get_weather", "recommend_lunch"]:
+                        exec_result = InfoAgent.execute_tool(fn_name, fn_args)
+                    else:
+                        exec_result = PCAgent.execute_tool(fn_name, fn_args)
                     
                     # 2. 2-Pass Gemini API 호출 (Function Response 전달하여 펫 성격별 피드백 대사 자동 수신)
                     contents.append({
