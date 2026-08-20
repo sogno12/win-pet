@@ -1,35 +1,105 @@
-# 🐾 AI 픽셀 데스크톱 펫 ('win_pet') 펫 관리 및 신규 제작 가이드
+# 🐱 win-pet: AI 픽셀 데스크톱 컴패니언 펫 (WinPet)
 
-본 프로젝트에서는 **사용자가 준비한 이미지 파일들을 3단계 오토 파이프라인으로 정돈하거나 GUI 클릭 한 번으로 펫을 새로 등록/관리**할 수 있습니다.
+> 윈도우 바탕화면에서 투명하게 뽀짝뽀짝 움직이며 사용자와 대화하고 PC 제어, 정보 탐색, 기억력 및 친밀도를 나눌 수 있는 **모바일/바탕화면 우선 AI 픽셀 펫 컴패니언**입니다.
 
 ---
 
-## 🛠️ 1. 터미널 명령어로 펫 관리하기 (`pet_generator.py`)
+## ✨ 핵심 주요 기능
 
-Conda 가상환경(`wincat`)에서 `pet_generator.py` 스크립트를 사용하여 간편하게 정돈합니다.
+- 🐾 **투명 픽셀 보행 & 몽환 안개 오버레이 UI (`ui/range_overlay.py`)**:
+  - 60FPS의 부드러운 자율 보행/대기 애니메이션 (상하좌우/대각선 2D 이동)
+  - `🔍 현재 이동 범위 미리보기 (안개 보기)` 및 `👁️ 이동 범위 안개 항상 켜기 (테스트 고정용)` 지원
+  - 5단계 세분화 이동 범위 (`🤏 매우 좁게` ~ `🌐 자유롭게`) 및 `config.json` 커스텀 안개 외곽선/색상/투명도 지원
+- 💬 **Gemini LLM 대화 & 페르소나 엔진 (`core/persona_builder.py`)**:
+  - `pets.json` 동적 펫 레지스트리 기반 어미 일관성 규칙 (`speech_style`) 및 2-Pass 대사 생성
+- 🛠️ **PC 제어 Agent (Function Calling)** (`core/pc_agent.py`):
+  - 유튜브/구글 음악/영상 검색 재생, 메모장/계산기/작업관리자 앱 실행, PC 화면 잠금, 볼륨 조절/음소거
+- 🌤️ **실시간 정보 탐색 Agent (`core/info_agent.py`)**:
+  - Open-Meteo REST API 실시간 기상/날씨 파싱 및 부담 없는 2단계 대화형 점심 메뉴 추천
+- 🧠 **독립 장기기억 시스템 (`long_term_memory.json`)** (`core/memory_agent.py`):
+  - 5가지 표준 카테고리 태그 (`profile`, `preference`, `schedule`, `habit`, `relation`)
+  - 중요도 (3~5점) 선별 영구 저장 및 키워드 연관 매칭 선택적 회상 (`Selective Retrieval`)
+- 📊 **펫 3대 상태 및 친밀도 시스템 (`status.json`)** (`core/status_agent.py`, `ui/dialog_status.py`):
+  - 머리 쓰다듬기/대화 보상, 30분 방치 감지, 5단계 친밀도 뱃지 및 `📊 펫 상태창...` GUI 팝업
+  - `happy/` 또는 `special/` 에셋 이미지가 없는 펫이라도 에러 없이 `idle/`로 100% 안전 폴백(Fallback)
+- 🎨 **3단계 오토 파이프라인 정돈기 (`pet_generator.py`)**:
+  - `assets/` 신규 펫 폴더 탐지 ➔ 1초 배경 제거(마젠타 #FF00FF 크로마키 포함) ➔ 캐릭터 크롭 ➔ 1:1 정사각형 정중앙 배치 ➔ 자동 메뉴 추가
 
-### 🧹 (1) 신규 펫 3단계 스마트 정돈하기
-사용자가 폴더에 넣어둔 이미지를 스마트 배경 제거 ➔ 캐릭터 크롭 ➔ 1:1 정사각형 정중앙 배치로 자동 정돈합니다.
+---
+
+## 🐍 Conda 가상환경 및 설치 가이드
+
+### 1. 가상환경 생성 및 패키지 설치
 ```bash
-python pet_generator.py <pet_id> "<펫_이름>"
+# 1. wincat 가상환경 생성 (Python 3.10+)
+conda create -n wincat python=3.10 -y
+
+# 2. 가상환경 활성화
+conda activate wincat
+
+# 3. 필수 패키지 설치
+pip install PyQt6 Pillow requests python-dotenv
 ```
-- **사용 예시:**
-  ```bash
-  python pet_generator.py fox_orange "🦊 주황 아기 여우"
-  ```
+
+### 2. 🔑 API 키 및 보안 설정 (.env)
+
+본 앱은 **Google Gemini API Key**가 필요합니다. 두 가지 방법 중 편하신 방법으로 등록할 수 있습니다:
+
+#### 방법 A: 프로그램 실행 후 GUI 팝업으로 입력 (추천)
+앱 실행 후 우클릭 메뉴의 **`🔑 API 키 설정...`**을 눌러 발급받은 키를 등록하면 자동으로 `config.json`에 저장되어 바로 작동합니다.
+
+#### 방법 B: `.env` 환경 변수 파일 생성
+루트 디렉토리에 `.env` 파일 (샘플: `.env.example` 참고)을 생성하고 아래와 같이 입력합니다:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+> [!IMPORTANT]
+> **보안 주의사항 (`.gitignore`)**:
+> - `.env` 파일 및 발급받은 API 키는 **Git 추적에서 완전히 차단(`.gitignore`)**되어 있으므로 GitHub public 저장소에 올리더라도 안심하셔도 됩니다.
+> - 개인 대화 로그(`logs/`), 단기/장기기억(`memory.json`, `long_term_memory.json`), 상태 수치(`status.json`)도 개인정보 보호를 위해 `.gitignore`에 등록되어 있습니다.
 
 ---
 
-### 🗑️ (2) 펫 삭제하기
-원하지 않는 펫의 이미지 폴더와 `pets.json` 등록 정보를 깨끗이 삭제합니다.
+## 🚀 실행 방법
+
 ```bash
-python pet_generator.py delete <pet_id>
+# 1. 픽셀 에셋 준비 (최초 1회 실행)
+python setup_assets.py
+
+# 2. win_pet 데스크톱 펫 실행
+python main.py
 ```
 
 ---
 
-## 📁 2. GUI 클릭 한 번으로 펫 만들기 (비개발자 친구용!)
+## 📂 프로젝트 폴더 구조
 
-1. `assets/` 폴더 안에 원하는 새 동물 폴더(예: `assets/my_puppy/`)를 만들고 정사각형 이미지를 넣습니다.
-2. 펫 우클릭 ➔ **`🐾 펫 스킨 변경` ➔ `✨ 신규 펫 자동 정돈/추가...`** 버튼을 클릭합니다.
-3. 팝업 창에 예쁜 이름을 적으면 **3단계 스마트 배경 제거 후 우클릭 메뉴에 동적으로 즉시 추가**됩니다!
+```text
+win_pet/
+├── assets/                  # 픽셀 아트 프레임 이미지 (owl_white, fox_orange 등)
+├── core/                    # 전문 비즈니스 모듈
+│   ├── pc_agent.py          # PC 제어 (Function Calling)
+│   ├── info_agent.py        # 실시간 날씨 & 점심 추천
+│   ├── memory_agent.py      # 스마트 회상 & long_term_memory.json
+│   ├── status_agent.py      # 3대 상태지수 & status.json
+│   ├── llm_client.py        # Gemini REST API 연동
+│   ├── persona_builder.py   # 어미 일관성 페르소나
+│   └── logger.py            # 날짜별 회전 로거
+├── ui/                      # PyQt6 GUI 오버레이 & 팝업
+│   ├── pet_widget.py        # 메인 투명 펫 위젯
+│   ├── range_overlay.py     # 몽환 반투명 안개 미리보기 UI
+│   ├── dialog_status.py     # 📊 펫 상태창 팝업
+│   ├── dialog_api_key.py    # 🔑 API 키 설정 팝업
+│   ├── dialog_input.py      # 대화 질의 입력창
+│   ├── speech_bubble.py     # 머리 위 실시간 말풍선
+│   └── tray_manager.py      # 시스템 트레이 아이콘 관리
+├── config.json              # 펫 크기, 속도, 안개 옵션 설정
+├── pets.json                # 펫 레지스트리 및 어미 페르소나
+├── pet_generator.py         # 3단계 스마트 에셋 정돈 오토 파이프라인
+├── setup_assets.py          # 기본 에셋 자동 준비 스크립트
+├── .env.example             # 환경 변수 샘플 파일
+├── .gitignore               # 개인 키 & 대화 데이터 차단 설정
+├── main.py                  # 프로그램 실행 진입점
+└── GEMINI.md                # 개발 로드맵 및 스펙 관리 문서
+```

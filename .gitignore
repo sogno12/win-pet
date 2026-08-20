@@ -47,3 +47,9 @@ $RECYCLE.BIN/
 # Log files
 logs/
 
+# User Data & History (Blocked from Git)
+memory.json
+long_term_memory.json
+status.json
+config.json
+
