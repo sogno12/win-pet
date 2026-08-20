@@ -161,9 +161,12 @@ class LLMClient:
             return errMsg
 
         # 메모리 컨텍스트 (시간 힌트 + 선택적 장기기억 + 단기 히스토리) 조립
+        from core.status_agent import StatusAgent
         memory_context = MemoryAgent.get_memory_context(user_query)
+        status_hint = StatusAgent.get_prompt_hint()
         base_system_instruction = PersonaBuilder.get_system_instruction(pet_key)
-        system_instruction = f"{base_system_instruction}\n\n[펫의 시공간 대화 기억 컨텍스트]\n{memory_context}"
+        
+        system_instruction = f"{base_system_instruction}\n\n[펫의 시공간 대화 기억 컨텍스트]\n{memory_context}\n\n{status_hint}"
 
         config = ConfigManager.load_config()
         model_name = config.get("llm_model", "gemini-3.1-flash-lite").strip()
@@ -272,11 +275,13 @@ class LLMClient:
                     resp = first_part["text"].strip()
                     PetLogger.log_pet(pet_key, resp)
                     MemoryAgent.save_interaction(user_query, resp)
+                    StatusAgent.interact("chat")
                     return resp
                 
                 resp = "답변을 정확히 이해하지 못했어요."
                 PetLogger.log_pet(pet_key, resp)
                 MemoryAgent.save_interaction(user_query, resp)
+                StatusAgent.interact("chat")
                 return resp
             else:
                 try:

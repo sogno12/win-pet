@@ -30,6 +30,11 @@ class TrayManager:
         summon_action = QAction("✨ 내 앞으로 불러오기", self.pet_widget)
         summon_action.triggered.connect(self.pet_widget.summon_to_mouse)
         menu.addAction(summon_action)
+
+        # 펫 상태창
+        status_action = QAction("📊 펫 상태창...", self.pet_widget)
+        status_action.triggered.connect(self.pet_widget.open_status_dialog)
+        menu.addAction(status_action)
         
         menu.addSeparator()
         

@@ -88,7 +88,8 @@ python main.py                # 펫 실행
 - [x] **[3순위] 기억력 Agent (Memory):** 대화 타임스탬프 및 설정 가능한 세션 만료(`session_timeout_minutes`) 기반 대화 회상 시스템 연동 완료 ([`core/memory_agent.py`](file:///d:/sjchoi/win_pet/core/memory_agent.py))
   - [x] 독립된 장기기억 보관소(`long_term_memory.json`) 및 5개 표준 태그(`profile`, `preference`, `schedule`, `habit`, `relation`) 구축
   - [x] 중요도 3~5점 이상 팩트 선별 저장 및 키워드 매칭 선택적 추출(`Selective Retrieval`) 연동 완료
-- [ ] **[4순위] 펫 상태 & 친밀도 (Status):** 머리 다듬기/대화에 따른 행복/심심 상태 변화
+- [x] **[4순위] 펫 상태 & 친밀도 (Status):** 3대 상태 지수(친밀도, 행복도, 심심함) 및 독립 보관소(`status.json`), 쓰다듬기/대화 보상 & 방치 감지, `📊 펫 상태창...` GUI 팝업 연동 완료 ([`core/status_agent.py`](file:///d:/sjchoi/win_pet/core/status_agent.py), [`ui/dialog_status.py`](file:///d:/sjchoi/win_pet/ui/dialog_status.py))
+  - [x] 이미지가 없는 펫 이미지 미존재 시 `idle/` 프레임 100% 안전 폴백(Fallback) 방어 모듈 연동 완료
 - [ ] **[5순위] win_pet (무설치 포터블 패키징):** 파이썬 미설치 PC에서도 켜지는 포터블 실행기 빌드
 
 **4단계: 음성 (STT/TTS) 연동 (예정)**

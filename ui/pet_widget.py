@@ -213,9 +213,9 @@ class PetWidget(QWidget):
         if self.state == "IDLE" or self.is_hovered or is_dialog_open:
             current_list = self.anim_frames["idle_r"]
         elif self.state == "HAPPY":
-            current_list = self.anim_frames["happy_r"]
+            current_list = self.anim_frames.get("happy_r") or self.anim_frames.get("idle_r")
         elif self.state == "SPECIAL":
-            current_list = self.anim_frames["special_r"]
+            current_list = self.anim_frames.get("special_r") or self.anim_frames.get("idle_r")
 
         if current_list:
             self.current_frame_idx = (self.current_frame_idx + 1) % len(current_list)
@@ -287,6 +287,8 @@ class PetWidget(QWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             if not self.is_dragging:
+                from core.status_agent import StatusAgent
+                StatusAgent.interact("pat")
                 self.open_dialog_input()
             else:
                 self.is_dragging = False
@@ -475,9 +477,20 @@ class PetWidget(QWidget):
             if self.tray_manager:
                 self.tray_manager.update_tray_menu()
 
+    def open_status_dialog(self):
+        from ui.dialog_status import DialogStatus
+        dlg = DialogStatus(self)
+        dlg.exec()
+
     def show_context_menu(self, global_pos):
         menu = QMenu(self)
         self.pets_registry = ConfigManager.load_pets_registry()
+
+        status_action = QAction("📊 펫 상태창...", self)
+        status_action.triggered.connect(self.open_status_dialog)
+        menu.addAction(status_action)
+
+        menu.addSeparator()
 
         top_text = "📌 맨 위 고정 해제" if self.is_always_on_top else "📌 항상 위에 표시"
         toggle_top_action = QAction(top_text, self)
