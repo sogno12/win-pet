@@ -48,9 +48,8 @@ class ConfigManager:
         try:
             with open(CONFIG_PATH, "w", encoding="utf-8") as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
-            print("💾 설정이 config.json에 저장되었습니다.")
         except Exception as e:
-            print(f"❌ 설정 저장 실패: {e}")
+            pass
 
     @classmethod
     def load_pets_registry(cls):
@@ -62,7 +61,7 @@ class ConfigManager:
                     loaded = json.load(f)
                     pets_data.update(loaded)
             except Exception as e:
-                print(f"⚠️ pets.json 로드 실패: {e}")
+                pass
 
         # assets/ 폴더 내에 실재하는 펫만 동적 검증
         if os.path.exists(ASSETS_DIR):
@@ -84,4 +83,4 @@ class ConfigManager:
             with open(PETS_REGISTRY_PATH, "w", encoding="utf-8") as f:
                 json.dump(pets_data, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"❌ pets.json 저장 실패: {e}")
+            pass
