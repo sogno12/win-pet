@@ -160,8 +160,8 @@ class LLMClient:
             PetLogger.log_error(errMsg)
             return errMsg
 
-        # 메모리 컨텍스트 (시간 힌트 + 대화 히스토리) 조립
-        memory_context = MemoryAgent.get_memory_context()
+        # 메모리 컨텍스트 (시간 힌트 + 선택적 장기기억 + 단기 히스토리) 조립
+        memory_context = MemoryAgent.get_memory_context(user_query)
         base_system_instruction = PersonaBuilder.get_system_instruction(pet_key)
         system_instruction = f"{base_system_instruction}\n\n[펫의 시공간 대화 기억 컨텍스트]\n{memory_context}"
 
