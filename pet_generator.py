@@ -221,6 +221,15 @@ def organize_and_convert_pet_pack(pet_id, pet_name=None, target_colors=None, tol
         except Exception as e:
             print(f"[{fname}] 변환 실패: {e}")
 
+    # 변환 결과 검증: 최소한 walk 폴더에 1개 이상의 유효한 픽셀 프레임이 생성되었는지 확인
+    walk_dir = os.path.join(pet_dir, "walk")
+    walk_frames = [f for f in os.listdir(walk_dir) if f.endswith((".png", ".jpg", ".jpeg"))] if os.path.exists(walk_dir) else []
+    
+    if not walk_frames:
+        print(f"❌ [{pet_name}] ({pet_id}) walk 프레임이 생성되지 않아 등록이 취소되었습니다.")
+        return False
+
+    # 모든 변환 및 검증이 완벽히 끝난 최종 단계에서만 pets.json에 등록
     pets_data = load_pets_json()
     pets_data[pet_id] = {
         "name": pet_name,
@@ -228,7 +237,7 @@ def organize_and_convert_pet_pack(pet_id, pet_name=None, target_colors=None, tol
     }
     save_pets_json(pets_data)
 
-    print(f"[성공] [{pet_name}] ({pet_id}) 3단계 오토 파이프라인 정돈이 완벽하게 완료되었습니다!")
+    print(f"[성공] [{pet_name}] ({pet_id}) 3단계 오토 파이프라인 정돈 완료 ➔ pets.json 최종 등록 성공!")
     return True
 
 def delete_pet(pet_id):
