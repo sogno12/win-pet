@@ -74,16 +74,77 @@ class LLMClient:
                 },
                 {
                     "name": "launch_app",
-                    "description": "Windows 응용 프로그램(메모장/notepad, 계산기/calc, 그림판/mspaint, 파일탐색기/explorer, 작업관리자/taskmgr, 크롬/chrome 등)을 실제 실행합니다. 사용자가 메모장을 켜달라거나 메모/기록/저장을 위해 메모장 실행을 요청할 때 무조건 이 함수를 호출하세요.",
+                    "description": "Windows 응용 프로그램(메모장/notepad, 계산기/calc, 크롬/chrome, 엣지/edge, 그림판/mspaint, 카카오톡/kakaotalk, 디스코드/discord, 스포티파이/spotify, 작업관리자/taskmgr 등)을 실제 실행합니다.",
                     "parameters": {
                         "type": "OBJECT",
                         "properties": {
                             "app_name": {
                                 "type": "STRING",
-                                "description": "실행할 앱 이름 (예: 메모장, notepad, 계산기, calc, taskmgr 등)"
+                                "description": "실행할 프로그램 이름 (예: 메모장, 계산기, 크롬, 카카오톡, 디스코드 등)"
                             }
                         },
                         "required": ["app_name"]
+                    }
+                },
+                {
+                    "name": "close_app",
+                    "description": "실행 중인 응용 프로그램(메모장, 계산기, 크롬, 엣지, 카카오톡, 디스코드, 그림판 등)을 안전하게 종료(끄기/닫기)합니다. 사용자가 특정 프로그램을 꺼달라거나 닫아달라고 할 때 호출하세요.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "app_name": {
+                                "type": "STRING",
+                                "description": "종료할 프로그램 이름 (예: 메모장, 계산기, 크롬, 카카오톡, 디스코드 등)"
+                            }
+                        },
+                        "required": ["app_name"]
+                    }
+                },
+                {
+                    "name": "add_schedule",
+                    "description": "일정(약속/시작일시) 또는 할 일(TODO/마감일시)을 캘린더에 등록합니다. 사용자가 '내일 3시 미팅', '오늘 6시까지 코딩하기' 등을 말할 때 호출하세요.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "title": {
+                                "type": "STRING",
+                                "description": "일정 또는 할 일 내용 (예: 팀 미팅, 치과 방문, 장보기 등)"
+                            },
+                            "date_str": {
+                                "type": "STRING",
+                                "description": "날짜 (오늘, 내일, 모레, 또는 yyyy/MM/dd)"
+                            },
+                            "time_str": {
+                                "type": "STRING",
+                                "description": "시간 (예: 15:00, 오후 3시, ALL_DAY 등)"
+                            },
+                            "item_type": {
+                                "type": "STRING",
+                                "enum": ["event", "todo"],
+                                "description": "항목 구분 (event: 일정/약속, todo: 할 일/체크리스트)"
+                            },
+                            "remind_before": {
+                                "type": "INTEGER",
+                                "description": "사전 알림 시간(분 단위, 기본 10분)"
+                            }
+                        },
+                        "required": ["title"]
+                    }
+                },
+                {
+                    "name": "get_today_schedule",
+                    "description": "오늘 등록된 일정 및 할 일(TODO) 목록을 조회합니다. 사용자가 '오늘 뭐 해야 돼?', '오늘 일정 알려줘', '할 일 목록' 등을 물어볼 때 호출하세요.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {}
+                    }
+                },
+                {
+                    "name": "get_morning_briefing",
+                    "description": "오늘 날씨와 오늘의 일정/할 일을 종합한 아침 굿모닝 브리핑을 요청합니다.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {}
                     }
                 },
                 {
@@ -271,12 +332,15 @@ class LLMClient:
                     fn_name = fn_call.get("name", "")
                     fn_args = fn_call.get("args", {})
                     
-                    # 1. 툴 로직 실제 실행 (InfoAgent / ScheduleAgent / PCAgent)
+                    # 1. 툴 로직 실제 실행 (InfoAgent / ScheduleAgent / CalendarAgent / PCAgent)
                     if fn_name in ["get_weather", "recommend_lunch"]:
                         exec_result = InfoAgent.execute_tool(fn_name, fn_args)
                     elif fn_name in ["set_timer", "start_pomodoro", "stop_pomodoro"]:
                         from core.schedule_agent import ScheduleAgent
                         exec_result = ScheduleAgent.execute_tool(fn_name, fn_args)
+                    elif fn_name in ["add_schedule", "get_today_schedule", "get_morning_briefing"]:
+                        from core.calendar_agent import CalendarAgent
+                        exec_result = CalendarAgent.execute_tool(fn_name, fn_args)
                     else:
                         exec_result = PCAgent.execute_tool(fn_name, fn_args)
                     

@@ -1,0 +1,98 @@
+{
+  "programs": {
+    "notepad": {
+      "name": "메모장",
+      "exe": "notepad.exe",
+      "aliases": [
+        "메모장",
+        "notepad",
+        "노트패드"
+      ]
+    },
+    "calc": {
+      "name": "계산기",
+      "exe": "CalculatorApp.exe",
+      "aliases": [
+        "계산기",
+        "calc",
+        "calculator",
+        "calc.exe"
+      ]
+    },
+    "chrome": {
+      "name": "크롬",
+      "exe": "chrome.exe",
+      "aliases": [
+        "크롬",
+        "chrome",
+        "크롬브라우저"
+      ]
+    },
+    "edge": {
+      "name": "엣지",
+      "exe": "msedge.exe",
+      "aliases": [
+        "엣지",
+        "edge",
+        "마이크로소프트엣지"
+      ]
+    },
+    "mspaint": {
+      "name": "그림판",
+      "exe": "mspaint.exe",
+      "aliases": [
+        "그림판",
+        "paint",
+        "mspaint"
+      ]
+    },
+    "kakaotalk": {
+      "name": "카카오톡",
+      "exe": "KakaoTalk.exe",
+      "aliases": [
+        "카카오톡",
+        "카톡",
+        "kakaotalk"
+      ]
+    },
+    "discord": {
+      "name": "디스코드",
+      "exe": "Discord.exe",
+      "aliases": [
+        "디스코드",
+        "디코",
+        "discord"
+      ]
+    },
+    "spotify": {
+      "name": "스포티파이",
+      "exe": "Spotify.exe",
+      "aliases": [
+        "스포티파이",
+        "스포티",
+        "spotify"
+      ]
+    },
+    "explorer": {
+      "name": "파일 탐색기",
+      "exe": "explorer.exe",
+      "aliases": [
+        "탐색기",
+        "파일탐색기",
+        "폴더",
+        "explorer"
+      ],
+      "allow_close": false
+    },
+    "taskmgr": {
+      "name": "작업 관리자",
+      "exe": "taskmgr.exe",
+      "aliases": [
+        "작업관리자",
+        "작업관리",
+        "taskmgr"
+      ],
+      "allow_close": true
+    }
+  }
+}

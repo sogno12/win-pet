@@ -5,31 +5,59 @@ import webbrowser
 from urllib.parse import quote
 from core.logger import PetLogger
 
+import json
+
 class PCAgent:
     """Windows PC 제어 및 자동화를 수행하는 클래스"""
 
-    ALLOWED_APPS = {
-        "notepad": "notepad.exe",
-        "메모장": "notepad.exe",
-        "calc": "calc.exe",
-        "계산기": "calc.exe",
-        "mspaint": "mspaint.exe",
-        "그림판": "mspaint.exe",
-        "explorer": "explorer.exe",
-        "탐색기": "explorer.exe",
-        "파일탐색기": "explorer.exe",
-        "taskmgr": "taskmgr.exe",
-        "작업관리자": "taskmgr.exe",
-        "chrome": "chrome.exe",
-        "크롬": "chrome.exe",
-        "edge": "msedge.exe",
-        "엣지": "msedge.exe"
+    PC_TARGETS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pc_targets.json")
+
+    # 기본 폴백 앱 매핑
+    FALLBACK_APPS = {
+        "notepad": {"name": "메모장", "exe": "notepad.exe", "aliases": ["메모장", "notepad"]},
+        "calc": {"name": "계산기", "exe": "CalculatorApp.exe", "aliases": ["계산기", "calc"]},
+        "chrome": {"name": "크롬", "exe": "chrome.exe", "aliases": ["크롬", "chrome"]},
+        "edge": {"name": "엣지", "exe": "msedge.exe", "aliases": ["엣지", "edge"]},
+        "mspaint": {"name": "그림판", "exe": "mspaint.exe", "aliases": ["그림판", "paint"]},
+        "kakaotalk": {"name": "카카오톡", "exe": "KakaoTalk.exe", "aliases": ["카카오톡", "카톡"]},
+        "discord": {"name": "디스코드", "exe": "Discord.exe", "aliases": ["디스코드", "디코"]},
+        "spotify": {"name": "스포티파이", "exe": "Spotify.exe", "aliases": ["스포티파이", "스포티"]},
+        "explorer": {"name": "파일 탐색기", "exe": "explorer.exe", "aliases": ["탐색기", "파일탐색기"], "allow_close": False},
+        "taskmgr": {"name": "작업 관리자", "exe": "taskmgr.exe", "aliases": ["작업관리자", "taskmgr"], "allow_close": True}
     }
 
     # VK 키 코드
     VK_VOLUME_MUTE = 0xAD
     VK_VOLUME_DOWN = 0xAE
     VK_VOLUME_UP = 0xAF
+
+    @classmethod
+    def load_targets(cls) -> dict:
+        """pc_targets.json 파일에서 프로그램 목록을 로드"""
+        if os.path.exists(cls.PC_TARGETS_PATH):
+            try:
+                with open(cls.PC_TARGETS_PATH, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return data.get("programs", cls.FALLBACK_APPS)
+            except Exception as e:
+                PetLogger.log_error(f"pc_targets.json 로드 실패: {e}")
+        return cls.FALLBACK_APPS
+
+    @classmethod
+    def _find_target(cls, app_name: str):
+        """앱 이름이나 별칭으로 설정 정보 검색"""
+        clean_name = app_name.lower().strip().replace(" ", "").replace(".exe", "")
+        programs = cls.load_targets()
+        
+        for key, info in programs.items():
+            if clean_name == key.lower():
+                return info
+            if clean_name == info.get("name", "").lower().replace(" ", ""):
+                return info
+            for alias in info.get("aliases", []):
+                if clean_name == alias.lower().replace(" ", "").replace(".exe", ""):
+                    return info
+        return None
 
     @classmethod
     def lock_pc(cls) -> str:
@@ -46,14 +74,15 @@ class PCAgent:
 
     @classmethod
     def launch_app(cls, app_name: str) -> str:
-        """지정한 애플리케이션을 실행합니다."""
-        clean_name = app_name.lower().strip()
-        exe = cls.ALLOWED_APPS.get(clean_name)
+        """지정한 애플리케이션을 안전하게 실행합니다."""
+        info = cls._find_target(app_name)
         
-        if not exe:
+        if not info:
+            # 화이트리스트 외 임의 실행 차단 또는 윈도우 기본 런처 전달
             try:
+                clean_name = app_name.strip()
                 subprocess.Popen(clean_name, shell=True)
-                msg = f"'{app_name}' 앱 실행 명령을 전달했습니다."
+                msg = f"'{app_name}' 실행 명령을 전달했습니다."
                 PetLogger.log_tool("launch_app", {"app_name": app_name}, msg)
                 return msg
             except Exception as e:
@@ -61,13 +90,52 @@ class PCAgent:
                 PetLogger.log_error(err_msg)
                 return err_msg
         
+        exe = info.get("exe")
+        display_name = info.get("name", app_name)
         try:
             subprocess.Popen(exe)
-            msg = f"'{app_name}' 프로그램이 실행되었습니다."
-            PetLogger.log_tool("launch_app", {"app_name": app_name}, msg)
+            msg = f"'{display_name}' 프로그램을 실행했습니다."
+            PetLogger.log_tool("launch_app", {"app_name": app_name, "exe": exe}, msg)
             return msg
         except Exception as e:
-            err_msg = f"'{app_name}' 실행 실패: {str(e)}"
+            err_msg = f"'{display_name}' 실행 실패: {str(e)}"
+            PetLogger.log_error(err_msg)
+            return err_msg
+
+    @classmethod
+    def close_app(cls, app_name: str) -> str:
+        """화이트리스트에 등록된 애플리케이션을 안전하게(Graceful close) 종료합니다."""
+        info = cls._find_target(app_name)
+        
+        if not info:
+            msg = f"안전을 위해 pc_targets.json에 등록된 프로그램만 종료할 수 있어요. ('{app_name}'은(는) 목록에 없습니다.)"
+            PetLogger.log_tool("close_app", {"app_name": app_name}, msg)
+            return msg
+        
+        if info.get("allow_close") is False:
+            msg = f"'{info.get('name', app_name)}'은(는) 시스템 안정성을 위해 종료가 제한된 프로그램이에요."
+            PetLogger.log_tool("close_app", {"app_name": app_name}, msg)
+            return msg
+
+        exe = info.get("exe")
+        display_name = info.get("name", app_name)
+
+        try:
+            # 1. Graceful 종료 시도 (강제 /F 없이 창 닫기 신호 전송)
+            cmd = f'taskkill /IM "{exe}"'
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                msg = f"'{display_name}' 프로그램을 안전하게 종료했습니다."
+            elif "찾을 수 없습니다" in result.stderr or "not found" in result.stderr.lower() or "128" in str(result.returncode):
+                msg = f"'{display_name}' 프로그램이 현재 실행 중이지 않아요."
+            else:
+                msg = f"'{display_name}' 종료 신호를 보냈습니다."
+            
+            PetLogger.log_tool("close_app", {"app_name": app_name, "exe": exe}, msg)
+            return msg
+        except Exception as e:
+            err_msg = f"'{display_name}' 종료 처리 중 오류 발생: {str(e)}"
             PetLogger.log_error(err_msg)
             return err_msg
 
@@ -141,6 +209,8 @@ class PCAgent:
             return cls.lock_pc()
         elif tool_name == "launch_app":
             return cls.launch_app(args.get("app_name", ""))
+        elif tool_name == "close_app":
+            return cls.close_app(args.get("app_name", ""))
         elif tool_name == "search_youtube":
             return cls.search_youtube(args.get("query", ""))
         elif tool_name == "search_google":

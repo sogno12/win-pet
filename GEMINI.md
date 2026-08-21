@@ -103,12 +103,16 @@ python main.py                # 펫 실행
 
 **4단계: 음성 (STT/TTS) 연동 및 신규 TODO 기능 목록**
 
-### 💡 향후 개발 TODO 목록 (우선 개발 예정)
-
-- [ ] **[TODO-1] 🛑 PC 앱 종료 Agent (`close_app` 도구 연동)**:
-  - 사용자가 *"카카오톡 끄기/종료해줘"*, *"메모장 닫아줘"*, *"크롬 브라우저 닫아줘"* 라고 요청 시 실행 중인 프로세스(카카오톡 `KakaoTalk.exe`, 메모장 `notepad.exe` 등)를 정밀 조치/종료하는 `close_app` 도구 확장.
-- [ ] **[TODO-2] 📅 오늘의 일정 등록 및 아침 브리핑 Agent**:
-  - *"오늘 일정 알려줘"*, *"내일 오후 3시 미팅 등록해줘"* 기능 및 아침 펫 소환 시 오늘 스케줄 브리핑 기능.
+- [x] **[TODO-1] 🛑 PC 프로그램 안전 제어 및 종료 Agent (`close_app` 도구 & `pc_targets.json`):**
+  - [x] 외부 JSON (`pc_targets.json`) 파일 분리로 제어 가능 프로그램(메모장, 계산기, 크롬, 엣지, 카카오톡, 디스코드 등) 안전 화이트리스트 관리
+  - [x] 강제 킬 방지 및 Graceful Close 우선 종료 처리로 데이터 유실 방어 완비 ([`core/pc_agent.py`](file:///c:/Users/nivis/Desktop/sogno-skill-up/win-pet/core/pc_agent.py))
+- [x] **[TODO-2] 📅 오늘의 일정 & 할 일(TODO) 통합 관리 및 아침 1회 브리핑 Agent:**
+  - [x] 단일 `schedules.json` 파일에서 일정(시작일시)과 할 일(마감일시 TODO/체크박스) 통합 CRUD 관리 ([`core/calendar_agent.py`](file:///c:/Users/nivis/Desktop/sogno-skill-up/win-pet/core/calendar_agent.py))
+  - [x] 아침 06~12시 최초 1회 실시간 날씨 + 오늘 일정 요약 굿모닝 브리핑 및 `status.json` 중복 방지 플래그 연동
+  - [x] 시작 10분 전 사전 알림 백그라운드 체커 및 펫 말풍선/행복 표정 연동
+  - [x] 우클릭 `📅 일정 / 할 일(TODO) 관리...` 다크 테마 GUI 팝업 UI 완비 ([`ui/dialog_calendar.py`](file:///c:/Users/nivis/Desktop/sogno-skill-up/win-pet/ui/dialog_calendar.py))
+- [x] **[개선] 시스템 프롬프트 외부 텍스트 분리:**
+  - [x] 파이썬 코드 수정 없이 누구나 메모장으로 공통 행동 지침을 수정할 수 있도록 `prompts/system_base.txt` 분리 및 실시간 동적 로드 완비 ([`core/persona_builder.py`](file:///c:/Users/nivis/Desktop/sogno-skill-up/win-pet/core/persona_builder.py))
 - [ ] **[TODO-3] 🎮 펫 퀴즈/미션 & 🎵 백그라운드 Lo-Fi BGM 플레이어**:
   - 심심함 해소 상식 퀴즈/습관 미션 및 집중용 백그라운드 음악 재생 연동.
 

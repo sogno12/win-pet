@@ -15,7 +15,21 @@ class PersonaBuilder:
         "4. 대답은 2~3문장 이내로 친절하고 다정하게 대화를 나누어라."
     )
 
+    PROMPT_BASE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts", "system_base.txt")
     PETS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pets.json")
+
+    @classmethod
+    def get_base_instruction(cls) -> str:
+        """외부 prompts/system_base.txt 파일이 있으면 읽고, 없으면 기본 지침 리턴"""
+        if os.path.exists(cls.PROMPT_BASE_PATH):
+            try:
+                with open(cls.PROMPT_BASE_PATH, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                    if content:
+                        return content
+            except Exception:
+                pass
+        return cls.BASE_INSTRUCTION
 
     @classmethod
     def load_pets_info(cls):
@@ -46,4 +60,4 @@ class PersonaBuilder:
             f"- 대화 턴이 바뀌거나 기능 툴을 실행하더라도 존댓말과 반말을 절대 섞거나 말투 연령대를 바꾸지 마십시오."
         )
 
-        return f"{cls.BASE_INSTRUCTION}\n\n{persona_note}"
+        return f"{cls.get_base_instruction()}\n\n{persona_note}"

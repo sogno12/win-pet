@@ -102,6 +102,15 @@ class PetWidget(QWidget):
         sched.timer_triggered.connect(self._on_schedule_timer_triggered)
         sched.pomodoro_phase_changed.connect(self._on_pomodoro_phase_changed)
 
+        # 💡 CalendarAgent 시그널 바인딩 (사전 알림 & 아침 브리핑)
+        from core.calendar_agent import CalendarAgent
+        cal = CalendarAgent.get_instance()
+        cal.schedule_reminded.connect(self._on_schedule_reminded)
+        cal.briefing_ready.connect(self._on_briefing_ready)
+
+        # ☀️ 아침 첫 실행 시 1회 브리핑 점검 (1500ms 후)
+        QTimer.singleShot(1500, self.check_morning_briefing)
+
     def set_tray_manager(self, tray_manager):
         self.tray_manager = tray_manager
 
@@ -535,6 +544,32 @@ class PetWidget(QWidget):
         # duration_ms=0: 유저가 클릭으로 확인할 때까지 영구 표시
         self.speech_bubble.show_message(f"{msg} (클릭하여 확인)", duration_ms=0)
 
+    def _on_schedule_reminded(self, sched_id, title, remind_type):
+        """10분 전 사전 일정/TODO 알림 발생 시 펫 반응"""
+        self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
+        self.update_pet_image()
+        self.speech_bubble.show_message(f"⏰ [알림] '{title}' ({remind_type}) (클릭하여 확인)", duration_ms=0)
+
+    def _on_briefing_ready(self, briefing_text):
+        """아침 브리핑 출력"""
+        if briefing_text:
+            self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
+            self.update_pet_image()
+            self.speech_bubble.show_message(briefing_text, duration_ms=12000)
+
+    def check_morning_briefing(self):
+        """아침 06~12시 최초 1회 브리핑 시도"""
+        from core.calendar_agent import CalendarAgent
+        briefing = CalendarAgent.get_instance().get_morning_briefing(force=False)
+        if briefing:
+            self._on_briefing_ready(briefing)
+
+    def open_calendar_dialog(self):
+        """일정 / 할 일 관리 팝업 열기"""
+        from ui.dialog_calendar import CalendarDialog
+        dlg = CalendarDialog(self)
+        dlg.exec()
+
     def open_timer_dialog(self):
         from ui.dialog_timer import DialogTimer
         dlg = DialogTimer(self)
@@ -559,6 +594,10 @@ class PetWidget(QWidget):
         status_action = QAction("📊 펫 상태창...", self)
         status_action.triggered.connect(self.open_status_dialog)
         menu.addAction(status_action)
+
+        calendar_action = QAction("📅 일정 / 할 일(TODO) 관리...", self)
+        calendar_action.triggered.connect(self.open_calendar_dialog)
+        menu.addAction(calendar_action)
 
         timer_action = QAction("⏰ 펫 타이머 / 포모도로...", self)
         timer_action.triggered.connect(self.open_timer_dialog)
