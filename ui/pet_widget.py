@@ -1,5 +1,5 @@
 import random
-from PyQt6.QtCore import Qt, QTimer, QPoint
+from PyQt6.QtCore import Qt, QTimer, QPoint, QThread, pyqtSignal
 from PyQt6.QtGui import QAction, QActionGroup, QCursor
 from PyQt6.QtWidgets import QWidget, QLabel, QMenu, QApplication
 
@@ -8,6 +8,24 @@ from core.asset_loader import AssetLoader
 from core.llm_client import LLMWorkerThread
 from ui.speech_bubble import SpeechBubble
 from ui.dialog_input import DialogInput
+
+class PetGeneratorWorker(QThread):
+    """신규 펫 에셋 정돈 작업을 백그라운드에서 비동기 처리하는 스레드 (UI 멈춤 방지)"""
+    finished = pyqtSignal(int, str)  # (added_count, message)
+    progress = pyqtSignal(str)
+
+    def __init__(self, folders_to_process):
+        super().__init__()
+        self.folders_to_process = folders_to_process
+
+    def run(self):
+        from pet_generator import organize_and_convert_pet_pack
+        added_count = 0
+        for folder_id, pet_name in self.folders_to_process:
+            self.progress.emit(f"[{pet_name}] 정돈 중...")
+            if organize_and_convert_pet_pack(folder_id, pet_name):
+                added_count += 1
+        self.finished.emit(added_count, "정돈 완료")
 
 class PetWidget(QWidget):
     """바탕화면 픽셀 펫 투명 윈도우 GUI 클래스 (5단계 세분화 이동 속도 지원)"""
@@ -476,25 +494,6 @@ class PetWidget(QWidget):
         dlg = DialogApiKey(self)
         if dlg.exec() == DialogApiKey.DialogCode.Accepted:
             self.config = ConfigManager.load_config()
-
-class PetGeneratorWorker(QThread):
-    """신규 펫 에셋 정돈 작업을 백그라운드에서 비동기 처리하는 스레드 (UI 멈춤 방지)"""
-    finished = pyqtSignal(int, str)  # (added_count, message)
-    progress = pyqtSignal(str)
-
-    def __init__(self, folders_to_process):
-        super().__init__()
-        self.folders_to_process = folders_to_process
-
-    def run(self):
-        from pet_generator import organize_and_convert_pet_pack
-        added_count = 0
-        for folder_id, pet_name in self.folders_to_process:
-            self.progress.emit(f"[{pet_name}] 정돈 중...")
-            if organize_and_convert_pet_pack(folder_id, pet_name):
-                added_count += 1
-        self.finished.emit(added_count, "정돈 완료")
-
 
     def scan_and_add_new_pets_gui(self):
         """✨ [GUI 0순위] assets/ 신규 폴더 탐지 ➔ 수정가능한 기본 이름 팝업 ➔ 백그라운드 QThread 비동기 3단계 오토 파이프라인"""
