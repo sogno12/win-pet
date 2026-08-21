@@ -477,11 +477,29 @@ class PetWidget(QWidget):
         if dlg.exec() == DialogApiKey.DialogCode.Accepted:
             self.config = ConfigManager.load_config()
 
+class PetGeneratorWorker(QThread):
+    """신규 펫 에셋 정돈 작업을 백그라운드에서 비동기 처리하는 스레드 (UI 멈춤 방지)"""
+    finished = pyqtSignal(int, str)  # (added_count, message)
+    progress = pyqtSignal(str)
+
+    def __init__(self, folders_to_process):
+        super().__init__()
+        self.folders_to_process = folders_to_process
+
+    def run(self):
+        from pet_generator import organize_and_convert_pet_pack
+        added_count = 0
+        for folder_id, pet_name in self.folders_to_process:
+            self.progress.emit(f"[{pet_name}] 정돈 중...")
+            if organize_and_convert_pet_pack(folder_id, pet_name):
+                added_count += 1
+        self.finished.emit(added_count, "정돈 완료")
+
+
     def scan_and_add_new_pets_gui(self):
-        """✨ [GUI 0순위] assets/ 신규 폴더 탐지 ➔ 수정가능한 기본 이름 팝업 ➔ 3단계 배경 제거 오토 파이프라인"""
+        """✨ [GUI 0순위] assets/ 신규 폴더 탐지 ➔ 수정가능한 기본 이름 팝업 ➔ 백그라운드 QThread 비동기 3단계 오토 파이프라인"""
         import os
         from PyQt6.QtWidgets import QInputDialog, QMessageBox
-        from pet_generator import organize_and_convert_pet_pack
 
         assets_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
         if not os.path.exists(assets_dir):
@@ -502,30 +520,38 @@ class PetWidget(QWidget):
             )
             return
 
-        added_count = 0
+        folders_to_process = []
         for folder_id in unregistered:
-            # 기본 디폴트 이름 생성 (수정 가능!)
             default_display_name = f"🐾 {folder_id.replace('_', ' ').title()}"
-
             pet_name, ok = QInputDialog.getText(
                 self,
                 f"✨ 신규 펫 [{folder_id}] 등록",
                 f"[{folder_id}] 펫이 탐지되었습니다!\n메뉴에 표시할 예쁜 이름을 입력해 주세요 (수정 가능):",
                 text=default_display_name
             )
-
             if not ok or not pet_name.strip():
                 pet_name = default_display_name
+            folders_to_process.append((folder_id, pet_name.strip()))
 
-            # 3단계 오토 파이프라인 구동
-            if organize_and_convert_pet_pack(folder_id, pet_name.strip()):
-                added_count += 1
+        if folders_to_process:
+            # 💡 펫이 멈추지 않도록 말풍선을 띄우고 QThread 백그라운드에서 비동기 처리!
+            self.speech_bubble.show_message("새 펫 에셋을 예쁘게 정돈하고 있어요! ✂️\n(잠시만 기다려주세요~)", duration_ms=15000)
 
+            self.generator_worker = PetGeneratorWorker(folders_to_process)
+            self.generator_worker.finished.connect(self._on_pet_generator_finished)
+            self.generator_worker.start()
+
+    def _on_pet_generator_finished(self, added_count, msg):
+        """백그라운드 펫 정돈 완료 콜백"""
+        from PyQt6.QtWidgets import QMessageBox
         if added_count > 0:
             self.pets_registry = ConfigManager.load_pets_registry()
-            QMessageBox.information(self, "성공", f"🎉 {added_count}개의 신규 펫이 스마트 배경 제거 후 메뉴에 추가 등록되었습니다!")
             if self.tray_manager:
                 self.tray_manager.update_tray_menu()
+            self.speech_bubble.show_message(f"🎉 {added_count}개의 신규 펫 정돈이 완료되었어요! 메뉴에서 스킨을 변경해보세요~", duration_ms=7000)
+            QMessageBox.information(self, "성공", f"🎉 {added_count}개의 신규 펫이 스마트 배경 제거 후 메뉴에 추가 등록되었습니다!")
+        else:
+            self.speech_bubble.hide_bubble()
 
     def _on_schedule_timer_triggered(self, timer_id, memo):
         self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
