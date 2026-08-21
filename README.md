@@ -110,11 +110,27 @@ python build_portable.py
 python pet_generator.py
 ```
 
+---
+
+## 🎨 AI 생성 이미지 피부색 붉은기 일괄 캘리브레이터 (`tools/skin_calibrator.py`)
+
+AI 이미지 생성 시 마젠타/보라 배경색이 캐릭터의 얼굴/피부에 스며들어(Color Bleed) 다음 프레임으로 갈수록 피부가 붉거나 자줏빛으로 변색되는 현상을 **1번 기준 이미지와의 RGB 오차 역보정**을 통해 원본 피부색으로 일괄 복원합니다:
+
+```bash
+# 1. 단일 이미지 피부색 보정
+python tools/skin_calibrator.py --ref 1번기준이미지.png --target 보정할이미지.png --out 결과.png
+
+# 2. 폴더 내 모든 프레임(walk, idle, happy 등) 일괄 캘리브레이션
+python tools/skin_calibrator.py --ref assets/my_pet/walk_0.png --folder assets/my_pet/
+```
+
+---
+
 ## 📂 프로젝트 폴더 구조
 
 ```text
 win_pet/
-├── assets/                  # 픽셀 아트 프레임 이미지 (owl_white, fox_orange 등)
+├── assets/                  # 픽셀 아트 프레임 이미지 (owl_white, fox_orange, sirius_black 등)
 ├── core/                    # 전문 비즈니스 모듈
 │   ├── pc_agent.py          # PC 제어 및 안전 종료 (pc_targets.json 연동)
 │   ├── calendar_agent.py    # 통합 일정/TODO 관리 & 아침 1회 브리핑
@@ -127,8 +143,10 @@ win_pet/
 │   └── logger.py            # 날짜별 회전 로거
 ├── prompts/                 # 시스템 프롬프트 외부 보관소
 │   └── system_base.txt      # 공통 행동 수칙 텍스트
+├── tools/                   # 에셋 제작 보조 유틸리티
+│   └── skin_calibrator.py   # AI 생성 피부색 붉은기 일괄 캘리브레이터
 ├── ui/                      # PyQt6 GUI 오버레이 & 팝업
-│   ├── pet_widget.py        # 메인 투명 펫 위젯
+│   ├── pet_widget.py        # 메인 투명 펫 위젯 (비동기 QThread 에셋 정돈 연동)
 │   ├── range_overlay.py     # 몽환 반투명 안개 미리보기 UI
 │   ├── dialog_calendar.py   # 📅 일정 / 할 일(TODO) 관리창
 │   ├── dialog_timer.py      # ⏰ 펫 타이머 / 포모도로 관리창

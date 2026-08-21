@@ -113,6 +113,11 @@ python main.py                # 펫 실행
   - [x] 우클릭 `📅 일정 / 할 일(TODO) 관리...` 다크 테마 GUI 팝업 UI 완비 ([`ui/dialog_calendar.py`](file:///c:/Users/nivis/Desktop/sogno-skill-up/win-pet/ui/dialog_calendar.py))
 - [x] **[개선] 시스템 프롬프트 외부 텍스트 분리:**
   - [x] 파이썬 코드 수정 없이 누구나 메모장으로 공통 행동 지침을 수정할 수 있도록 `prompts/system_base.txt` 분리 및 실시간 동적 로드 완비 ([`core/persona_builder.py`](file:///c:/Users/nivis/Desktop/sogno-skill-up/win-pet/core/persona_builder.py))
+- [x] **[개선] AI 생성 이미지 피부색 붉은기 일괄 캘리브레이터 (`tools/skin_calibrator.py`):**
+  - [x] 마젠타/보라 배경으로 인한 피부색 번짐(Color Bleed) 감지 ➔ 1번 기준 이미지와의 RGB 오차(델타) 정밀 계산 ➔ 피부 영역만 1:1 역보정 복원 완비
+  - [x] 단일 파일 및 폴더 전체 일괄(Batch) 캘리브레이션 지원
+- [x] **[개선] 신규 펫 자동 정돈 비동기 QThread 전환 (`PetGeneratorWorker`):**
+  - [x] 대용량 이미지 배경 제거/크롭 중 펫이 멈추던 UI 프리징(Freeze) 완벽 해결 ➔ 작업 중 자율 보행 유지 + 말풍선 실시간 안내 팝업
 - [ ] **[TODO-3] 🎮 펫 퀴즈/미션 & 🎵 백그라운드 Lo-Fi BGM 플레이어**:
   - 심심함 해소 상식 퀴즈/습관 미션 및 집중용 백그라운드 음악 재생 연동.
 
