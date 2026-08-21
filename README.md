@@ -10,10 +10,21 @@
   - 60FPS의 부드러운 자율 보행/대기 애니메이션 (상하좌우/대각선 2D 이동)
   - `🔍 현재 이동 범위 미리보기 (안개 보기)` 및 `👁️ 이동 범위 안개 항상 켜기 (테스트 고정용)` 지원
   - 5단계 세분화 이동 범위 (`🤏 매우 좁게` ~ `🌐 자유롭게`) 및 `config.json` 커스텀 안개 외곽선/색상/투명도 지원
-- 💬 **Gemini LLM 대화 & 페르소나 엔진 (`core/persona_builder.py`)**:
+- 💬 **Gemini LLM 대화 & 프롬프트 외부 분리 (`prompts/system_base.txt`, `core/persona_builder.py`)**:
+  - `prompts/system_base.txt`로 공통 행동 수칙 분리 (메모장으로 누구나 손쉽게 수정 가능)
   - `pets.json` 동적 펫 레지스트리 기반 어미 일관성 규칙 (`speech_style`) 및 2-Pass 대사 생성
-- 🛠️ **PC 제어 Agent (Function Calling)** (`core/pc_agent.py`):
-  - 유튜브/구글 음악/영상 검색 재생, 메모장/계산기/작업관리자 앱 실행, PC 화면 잠금, 볼륨 조절/음소거
+- 🛑 **PC 프로그램 안전 제어 & 종료 Agent (`pc_targets.json`, `core/pc_agent.py`)**:
+  - 외부 JSON (`pc_targets.json`) 기반으로 제어 가능 프로그램(메모장, 계산기, 크롬, 엣지, 카톡, 디스코드 등) 안전 화이트리스트 관리
+  - 윈도우 창 닫기 신호(`taskkill /IM`) 우선 전송으로 저장되지 않은 작업 데이터 유실 원천 방어
+  - 유튜브/구글 음악/영상 검색 재생, PC 화면 잠금, 시스템 볼륨 조절/음소거 지원
+- 📅 **통합 일정 & 할 일(TODO) 관리 / 아침 1회 굿모닝 브리핑 (`core/calendar_agent.py`, `ui/dialog_calendar.py`)**:
+  - 단일 `schedules.json` 파일에서 일정(시작일시 약속)과 할 일(마감일시 TODO/체크박스) 통합 CRUD 관리
+  - 아침(06~12시) 최초 1회 실시간 날씨 + 오늘 일정 요약 굿모닝 브리핑 (중복 방지 플래그 지원)
+  - 일정 시작 10분 전 사전 알림 펫 말풍선 팝업
+  - 펫 우클릭 메뉴 `📅 일정 / 할 일(TODO) 관리...` 다크 테마 GUI 팝업 완비
+- ⏰ **1회성 타이머 & 반복 포모도로 스케줄러 (`core/schedule_agent.py`, `ui/dialog_timer.py`)**:
+  - 대화 및 GUI로 타이머/정각 알람 설정 및 집중(25분)-휴식(5분) 자동 반복 포모도로 사이클
+  - 우클릭 `⏰ 펫 타이머 / 포모도로...` GUI 팝업 완비
 - 🌤️ **실시간 정보 탐색 Agent (`core/info_agent.py`)**:
   - Open-Meteo REST API 실시간 기상/날씨 파싱 및 부담 없는 2단계 대화형 점심 메뉴 추천
 - 🧠 **독립 장기기억 시스템 (`long_term_memory.json`)** (`core/memory_agent.py`):
@@ -105,21 +116,29 @@ python pet_generator.py
 win_pet/
 ├── assets/                  # 픽셀 아트 프레임 이미지 (owl_white, fox_orange 등)
 ├── core/                    # 전문 비즈니스 모듈
-│   ├── pc_agent.py          # PC 제어 (Function Calling)
+│   ├── pc_agent.py          # PC 제어 및 안전 종료 (pc_targets.json 연동)
+│   ├── calendar_agent.py    # 통합 일정/TODO 관리 & 아침 1회 브리핑
+│   ├── schedule_agent.py    # 1회성 타이머 & 포모도로 스케줄러
 │   ├── info_agent.py        # 실시간 날씨 & 점심 추천
 │   ├── memory_agent.py      # 스마트 회상 & long_term_memory.json
 │   ├── status_agent.py      # 3대 상태지수 & status.json
 │   ├── llm_client.py        # Gemini REST API 연동
-│   ├── persona_builder.py   # 어미 일관성 페르소나
+│   ├── persona_builder.py   # 어미 일관성 페르소나 (prompts/system_base.txt 연동)
 │   └── logger.py            # 날짜별 회전 로거
+├── prompts/                 # 시스템 프롬프트 외부 보관소
+│   └── system_base.txt      # 공통 행동 수칙 텍스트
 ├── ui/                      # PyQt6 GUI 오버레이 & 팝업
 │   ├── pet_widget.py        # 메인 투명 펫 위젯
 │   ├── range_overlay.py     # 몽환 반투명 안개 미리보기 UI
+│   ├── dialog_calendar.py   # 📅 일정 / 할 일(TODO) 관리창
+│   ├── dialog_timer.py      # ⏰ 펫 타이머 / 포모도로 관리창
 │   ├── dialog_status.py     # 📊 펫 상태창 팝업
 │   ├── dialog_api_key.py    # 🔑 API 키 설정 팝업
 │   ├── dialog_input.py      # 대화 질의 입력창
 │   ├── speech_bubble.py     # 머리 위 실시간 말풍선
 │   └── tray_manager.py      # 시스템 트레이 아이콘 관리
+├── pc_targets.json          # PC 제어/종료 허용 프로그램 화이트리스트
+├── schedules.json           # 통합 일정 및 할 일(TODO) 로컬 데이터
 ├── config.json              # 펫 크기, 속도, 안개 옵션 설정
 ├── pets.json                # 펫 레지스트리 및 어미 페르소나
 ├── pet_generator.py         # 3단계 스마트 에셋 정돈 오토 파이프라인
