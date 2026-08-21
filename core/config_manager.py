@@ -61,29 +61,14 @@ class ConfigManager:
 
     @classmethod
     def load_pets_registry(cls):
-        """pets.json 레지스트리 데이터를 깔끔하고 빠르게 읽어오는 정갈한 로더"""
-        pets_data = DEFAULT_PETS.copy()
+        """pets.json 레지스트리를 단일 기준으로 읽어오며, 파일에서 삭제하거나 비활성화한 설정을 100% 존중합니다."""
         if os.path.exists(PETS_REGISTRY_PATH):
             try:
                 with open(PETS_REGISTRY_PATH, "r", encoding="utf-8") as f:
-                    loaded = json.load(f)
-                    pets_data.update(loaded)
+                    return json.load(f)
             except Exception as e:
                 pass
-
-        # assets/ 폴더 내에 실재하는 펫만 동적 검증
-        if os.path.exists(ASSETS_DIR):
-            for item in os.listdir(ASSETS_DIR):
-                item_path = os.path.join(ASSETS_DIR, item)
-                if os.path.isdir(item_path):
-                    walk_dir = os.path.join(item_path, "walk")
-                    if os.path.exists(walk_dir) and item not in pets_data:
-                        pets_data[item] = {
-                            "name": f"🐾 {item.replace('_', ' ').title()}",
-                            "enabled": True
-                        }
-                    
-        return pets_data
+        return DEFAULT_PETS.copy()
 
     @classmethod
     def get_dynamic_salt(cls) -> bytes:
