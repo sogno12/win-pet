@@ -27,7 +27,7 @@ DEFAULT_CONFIG = {
 }
 
 DEFAULT_PETS = {
-    "owl_white": {"name": "🦉 복슬복슬 하얀 부엉이 (HD)", "enabled": True}
+    "owl_white": {"name": "🦉 하얀 부엉이", "enabled": True}
 }
 
 class ConfigManager:

@@ -118,6 +118,13 @@ python main.py                # 펫 실행
   - [x] 단일 파일 및 폴더 전체 일괄(Batch) 캘리브레이션 지원
 - [x] **[개선] 신규 펫 자동 정돈 비동기 QThread 전환 (`PetGeneratorWorker`):**
   - [x] 대용량 이미지 배경 제거/크롭 중 펫이 멈추던 UI 프리징(Freeze) 완벽 해결 ➔ 작업 중 자율 보행 유지 + 말풍선 실시간 안내 팝업
+- [x] **[개선] `pets.json` 단일 기준(Single Source of Truth) 일원화 & 페르소나 자동 완성:**
+  - [x] 임의의 `assets/` 스캔 주입 로직 제거 ➔ `pets.json` 삭제/비활성화 시 100% 즉시 반영
+  - [x] 신규 펫 등록 시 `species`, `tone`, `speech_style` 기본 템플릿 필드 오프라인 자동 완성 완비
+  - [x] Windows CP949 콘솔 인코딩 예외 크래시 방어 완비
+- [x] **[개선] 무설치 포터블 패키징 (`build_portable.py`) 리소스 완벽 동기화:**
+  - [x] `dist/win_pet/` 루트에 `assets/`, `prompts/`, `pets.json`, `config.json`, `pc_targets.json` 자동 동기화 배치
+  - [x] 포터블 실행 시 `BASE_DIR` 경로 일치 보장 및 빌드 임시 폴더(`build/`) 자동 정리
 - [ ] **[TODO-3] 🎮 펫 퀴즈/미션 & 🎵 백그라운드 Lo-Fi BGM 플레이어**:
   - 심심함 해소 상식 퀴즈/습관 미션 및 집중용 백그라운드 음악 재생 연동.
 

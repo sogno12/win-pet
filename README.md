@@ -130,7 +130,7 @@ python tools/skin_calibrator.py --ref assets/my_pet/walk_0.png --folder assets/m
 
 ```text
 win_pet/
-├── assets/                  # 픽셀 아트 프레임 이미지 (owl_white, fox_orange, sirius_black 등)
+├── assets/                  # 픽셀 아트 프레임 이미지 (owl_white, fox_orange 등)
 ├── core/                    # 전문 비즈니스 모듈
 │   ├── pc_agent.py          # PC 제어 및 안전 종료 (pc_targets.json 연동)
 │   ├── calendar_agent.py    # 통합 일정/TODO 관리 & 아침 1회 브리핑

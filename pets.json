@@ -12,5 +12,12 @@
     "tone": "발랄하고 애교 있으며 다정함",
     "speech_style": "발랄하고 친근한 반말체 (~했어, ~해줄게!, ~해볼까?)",
     "enabled": true
+  },
+  "sirius_black": {
+    "name": "🐾 Sirius Black",
+    "species": "Sirius Black",
+    "tone": "다정하고 애교 있으며 호기심 많음",
+    "speech_style": "다정하고 친근한 존댓말체 (~해요, ~합니다, ~해드릴게요)",
+    "enabled": true
   }
 }
