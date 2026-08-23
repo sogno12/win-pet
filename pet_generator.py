@@ -4,29 +4,13 @@ import json
 import shutil
 from PIL import Image
 
-if getattr(sys, 'frozen', False):
-    BASE_DIR = os.path.dirname(sys.executable)
-else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-ASSETS_DIR = os.path.join(BASE_DIR, "assets")
-PETS_JSON_PATH = os.path.join(BASE_DIR, "pets.json")
+from core.config_manager import ConfigManager, BASE_DIR, ASSETS_DIR, PETS_REGISTRY_PATH
 
 def load_pets_json():
-    if os.path.exists(PETS_JSON_PATH):
-        try:
-            with open(PETS_JSON_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {}
+    return ConfigManager.load_pets_registry()
 
 def save_pets_json(data):
-    try:
-        with open(PETS_JSON_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-    except Exception as e:
-        print(f"❌ pets.json 저장 실패: {e}")
+    ConfigManager.save_pets_registry(data)
 
 def hex_to_rgb(hex_str):
     """Hex 색상 코드를 (R, G, B) 튜플로 변환"""
@@ -208,8 +192,9 @@ def organize_and_convert_pet_pack(pet_id, pet_name=None, target_colors=None, tol
                 target_cat = cat
                 break
 
+        # 접두사가 없는 파일명(예: 1.png, image.png)은 기본적으로 walk 카테고리로 자동 할당
         if not target_cat:
-            continue
+            target_cat = "walk"
 
         dest_dir = os.path.join(pet_dir, target_cat)
         dest_path = os.path.join(dest_dir, fname if fname.endswith(".png") else f"{os.path.splitext(fname)[0]}.png")
@@ -221,19 +206,25 @@ def organize_and_convert_pet_pack(pet_id, pet_name=None, target_colors=None, tol
             
             if os.path.exists(fpath) and fpath != dest_path:
                 os.remove(fpath)
-            print(f"  ✓ [{fname}] ➔ [스마트 배경 투명 ➔ 1:1 정중앙 자동 배치] 완료 후 [{target_cat}/] 이동")
+            print(f"  [OK] [{fname}] -> [{target_cat}/] 이동")
         except Exception as e:
             print(f"[{fname}] 변환 실패: {e}")
 
-    # 변환 결과 검증: 최소한 walk 폴더에 1개 이상의 유효한 픽셀 프레임이 생성되었는지 확인
+    # 변환 결과 검증: walk 또는 idle에 유효한 프레임이 존재하는지 확인
     walk_dir = os.path.join(pet_dir, "walk")
+    idle_dir = os.path.join(pet_dir, "idle")
     walk_frames = [f for f in os.listdir(walk_dir) if f.endswith((".png", ".jpg", ".jpeg"))] if os.path.exists(walk_dir) else []
+    idle_frames = [f for f in os.listdir(idle_dir) if f.endswith((".png", ".jpg", ".jpeg"))] if os.path.exists(idle_dir) else []
     
-    if not walk_frames:
-        print(f"❌ [{pet_name}] ({pet_id}) walk 프레임이 생성되지 않아 등록이 취소되었습니다.")
+    if not walk_frames and not idle_frames:
+        print(f"[FAIL] [{pet_name}] ({pet_id}) 유효한 이미지 프레임이 생성되지 않아 등록이 취소되었습니다.")
         return False
 
-    # 모든 변환 및 검증이 완벽히 끝난 최종 단계에서만 pets.json에 등록
+    # walk 프레임이 비어있고 idle만 있다면 안전하게 idle 프레임을 복사
+    if not walk_frames and idle_frames:
+        shutil.copy2(os.path.join(idle_dir, idle_frames[0]), os.path.join(walk_dir, idle_frames[0]))
+
+    # 모든 변환 및 검증이 완벽히 끝난 최종 단계에서 pets.json에 즉시 디스크 영구 저장!
     pets_data = load_pets_json()
     pets_data[pet_id] = {
         "name": pet_name,
@@ -241,27 +232,27 @@ def organize_and_convert_pet_pack(pet_id, pet_name=None, target_colors=None, tol
     }
     save_pets_json(pets_data)
 
-    print(f"[성공] [{pet_name}] ({pet_id}) 3단계 오토 파이프라인 정돈 완료 ➔ pets.json 최종 등록 성공!")
+    print(f"[SUCCESS] [{pet_id}] 3단계 오토 파이프라인 정돈 완료 및 pets.json 최종 등록 성공!")
     return True
 
 def delete_pet(pet_id):
     pet_dir = os.path.join(ASSETS_DIR, pet_id)
     if os.path.exists(pet_dir):
         shutil.rmtree(pet_dir, ignore_errors=True)
-        print(f"🗑️ [{pet_id}] 에셋 폴더가 삭제되었습니다.")
+        print(f"[DELETE] [{pet_id}] 에셋 폴더가 삭제되었습니다.")
 
     pets_data = load_pets_json()
     if pet_id in pets_data:
         del pets_data[pet_id]
         save_pets_json(pets_data)
-        print(f"🗑️ pets.json에서 [{pet_id}]가 삭제되었습니다.")
+        print(f"[DELETE] pets.json에서 [{pet_id}]가 삭제되었습니다.")
 
 def list_pets():
     pets_data = load_pets_json()
-    print("\n📋 현재 등록된 펫 목록:")
+    print("\n[PET LIST] 현재 등록된 펫 목록:")
     for k, v in pets_data.items():
-        status = "✅ 활성화" if v.get("enabled", True) else "❌ 비활성화"
-        print(f"  • ID: {k:15s} | 이름: {v.get('name', k):25s} | 상태: {status}")
+        status = "활성화" if v.get("enabled", True) else "비활성화"
+        print(f"  * ID: {k:15s} | 이름: {v.get('name', k):25s} | 상태: {status}")
     print()
 
 if __name__ == "__main__":
