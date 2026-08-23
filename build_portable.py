@@ -48,9 +48,30 @@ def build_portable_package():
     try:
         subprocess.check_call(pyinstaller_cmd, cwd=BASE_DIR)
         
-        # 포터블 배포 폴더에 사용법 안내 txt 자동 생성
         dist_dir = os.path.join(BASE_DIR, "dist", "win_pet")
         if os.path.exists(dist_dir):
+            import shutil
+            import json
+
+            # 1. 필수 리소스 및 설정 파일을 dist/win_pet 루트로 복사
+            # (포터블 실행 시 사용자가 assets를 추가하거나 pets.json을 수정할 수 있도록 루트에 배치)
+            sync_files = ["pets.json", "config.json", "pc_targets.json", ".env.example"]
+            for f in sync_files:
+                src_f = os.path.join(BASE_DIR, f)
+                dst_f = os.path.join(dist_dir, f)
+                if os.path.exists(src_f):
+                    shutil.copy2(src_f, dst_f)
+
+            sync_dirs = ["assets", "prompts"]
+            for d in sync_dirs:
+                src_d = os.path.join(BASE_DIR, d)
+                dst_d = os.path.join(dist_dir, d)
+                if os.path.exists(src_d):
+                    if os.path.exists(dst_d):
+                        shutil.rmtree(dst_d, ignore_errors=True)
+                    shutil.copytree(src_d, dst_d)
+
+            # 사용법 안내 텍스트 생성
             readme_path = os.path.join(dist_dir, "비개발자_사용법_안내.txt")
             with open(readme_path, "w", encoding="utf-8") as f:
                 f.write(
@@ -72,21 +93,33 @@ def build_portable_package():
 즐거운 시간 되세요!
 """
                 )
-            # 🔒 보안 조치: 배포본 config.json 내 개발자 API 키 자동 소거(Sanitize)
+
+            # 보안 조치: config.json 내 API 키 소거
             dist_config_path = os.path.join(dist_dir, "config.json")
             if os.path.exists(dist_config_path):
                 try:
                     with open(dist_config_path, "r", encoding="utf-8") as f:
                         cfg_data = json.load(f)
-                    if "llm_api_key" in cfg_data:
-                        cfg_data["llm_api_key"] = ""
+                    for k in ["llm_api_key", "gemini_api_key"]:
+                        if k in cfg_data:
+                            del cfg_data[k]
                     with open(dist_config_path, "w", encoding="utf-8") as f:
                         json.dump(cfg_data, f, indent=2, ensure_ascii=False)
-                    print("[SECURITY] 배포용 config.json 내 개발자 API 키 자동 소거 완료!")
-                except Exception as e:
-                    print(f"[WARN] config.json 소거 처리 중 알림: {e}")
+                except Exception:
+                    pass
 
-            print("\n[SUCCESS] 무설치 포터블 패키지 빌드가 완료되었습니다!")
+            # 2. 사용자 혼란 방지를 위해 build/ 임시 폴더 및 .spec 파일 정리
+            build_dir = os.path.join(BASE_DIR, "build")
+            if os.path.exists(build_dir):
+                shutil.rmtree(build_dir, ignore_errors=True)
+            spec_file = os.path.join(BASE_DIR, "win_pet.spec")
+            if os.path.exists(spec_file):
+                try:
+                    os.remove(spec_file)
+                except Exception:
+                    pass
+
+            print("\n[SUCCESS] 무설치 포터블 패키지 빌드가 완벽하게 완료되었습니다!")
             print(f"[DIST] 배포용 폴더 위치: {dist_dir}")
             print(f"[EXE] 실행 파일 위치: {os.path.join(dist_dir, 'win_pet.exe')}")
     except Exception as e:

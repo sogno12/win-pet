@@ -499,11 +499,11 @@ class PetWidget(QWidget):
         """✨ [GUI 0순위] assets/ 신규 폴더 탐지 ➔ 수정가능한 기본 이름 팝업 ➔ 백그라운드 QThread 비동기 3단계 오토 파이프라인"""
         import os
         from PyQt6.QtWidgets import QInputDialog, QMessageBox
+        from core.config_manager import BASE_DIR
 
-        assets_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
+        assets_dir = os.path.join(BASE_DIR, "assets")
         if not os.path.exists(assets_dir):
-            QMessageBox.warning(self, "경고", "assets/ 폴더를 찾을 수 없습니다.")
-            return
+            os.makedirs(assets_dir, exist_ok=True)
 
         unregistered = []
         for item in os.listdir(assets_dir):

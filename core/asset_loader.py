@@ -1,8 +1,7 @@
 import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QTransform
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from core.config_manager import BASE_DIR
 
 class AssetLoader:
     """펫 에셋(walk, idle, drag, happy, special) 전용 로딩 및 캐싱 클래스"""
