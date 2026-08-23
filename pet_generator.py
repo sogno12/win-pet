@@ -226,13 +226,21 @@ def organize_and_convert_pet_pack(pet_id, pet_name=None, target_colors=None, tol
 
     # 모든 변환 및 검증이 완벽히 끝난 최종 단계에서 pets.json에 즉시 디스크 영구 저장!
     pets_data = load_pets_json()
+    existing_pet = pets_data.get(pet_id, {})
+    
+    # 💡 species, tone, speech_style 기본 템플릿 자동 지정
+    clean_species = pet_name.replace("🐾", "").replace("🦉", "").replace("🦊", "").strip() or pet_id.replace("_", " ").title()
+    
     pets_data[pet_id] = {
         "name": pet_name,
+        "species": existing_pet.get("species", clean_species),
+        "tone": existing_pet.get("tone", "다정하고 애교 있으며 호기심 많음"),
+        "speech_style": existing_pet.get("speech_style", "다정하고 친근한 존댓말체 (~해요, ~합니다, ~해드릴게요)"),
         "enabled": True
     }
     save_pets_json(pets_data)
 
-    print(f"[SUCCESS] [{pet_id}] 3단계 오토 파이프라인 정돈 완료 및 pets.json 최종 등록 성공!")
+    print(f"[SUCCESS] [{pet_id}] 3단계 오토 파이프라인 정돈 완료 및 페르소나 포함 pets.json 최종 등록 성공!")
     return True
 
 def delete_pet(pet_id):
