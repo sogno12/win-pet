@@ -60,6 +60,29 @@ class PetLogger:
         logger.info(f"[PET_RESPONSE] ({pet_key}): {response}")
 
     @classmethod
+    def log_api_usage(cls, prompt_tokens: int, candidate_tokens: int, total_tokens: int, model_name: str = ""):
+        logger = cls.get_logger()
+        logger.info(f"[API_USAGE] Model={model_name} | Prompt={prompt_tokens}, Candidate={candidate_tokens}, Total={total_tokens} tokens")
+
+    @classmethod
     def log_error(cls, error_msg: str):
         logger = cls.get_logger()
         logger.error(f"[ERROR] {error_msg}")
+
+    @classmethod
+    def get_today_log_path(cls) -> str:
+        log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs")
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        return os.path.join(log_dir, f"{today_str}.log")
+
+    @classmethod
+    def open_today_log(cls):
+        """오늘자 로그 파일을 메모장(Notepad)이나 기본 연결 프로그램으로 즉시 엽니다."""
+        log_path = cls.get_today_log_path()
+        if not os.path.exists(log_path):
+            cls.get_logger() # 생성
+        try:
+            os.startfile(log_path)
+        except Exception as e:
+            cls.log_error(f"로그 파일 열기 실패: {e}")
+

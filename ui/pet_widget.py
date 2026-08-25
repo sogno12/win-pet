@@ -651,6 +651,11 @@ class PetWidget(QWidget):
         api_key_action.triggered.connect(self.open_api_key_dialog)
         menu.addAction(api_key_action)
 
+        from core.logger import PetLogger
+        log_action = QAction("📋 실행 및 API 이력 로그 보기...", self)
+        log_action.triggered.connect(PetLogger.open_today_log)
+        menu.addAction(log_action)
+
         hide_action = QAction("🙈 숨기기 (트레이로)", self)
         hide_action.triggered.connect(self.hide)
         menu.addAction(hide_action)

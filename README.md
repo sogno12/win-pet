@@ -33,6 +33,13 @@
 - 📊 **펫 3대 상태 및 친밀도 시스템 (`status.json`)** (`core/status_agent.py`, `ui/dialog_status.py`):
   - 머리 쓰다듬기/대화 보상, 30분 방치 감지, 5단계 친밀도 뱃지 및 `📊 펫 상태창...` GUI 팝업
   - `happy/` 또는 `special/` 에셋 이미지가 없는 펫이라도 에러 없이 `idle/`로 100% 안전 폴백(Fallback)
+- 📋 **실시간 API 토큰 사용량 & 실행 이력 로그 보기 (`core/logger.py`, `core/llm_client.py`)**:
+  - 매 대화별 Gemini API 토큰 수 (`Prompt`, `Candidate`, `Total` tokens) 자동 파싱 및 `logs/YYYY-MM-DD.log` 실시간 기록
+  - 펫 우클릭 및 트레이 메뉴 `📋 실행 및 API 이력 로그 보기...` 지원 (메모장으로 즉시 로그 확인)
+  - 펫의 대화, 툴 수행 인자/결과, Action-Fulfillment Safety Guard 강제 실행 이력 및 API 오류 종합 추적
+- 🚀 **윈도우 시작 시 자동 실행 & CWD 경로 방어 (`main.py`, `core/config_manager.py`)**:
+  - 우클릭 및 트레이 메뉴 `🚀 윈도우 시작 시 자동 실행` 토글 지원 (Windows 시작 프로그램 레지스트리 자동 등록)
+  - 부팅 시 작업 디렉터리(`CWD`)가 `System32` 등으로 이탈되어 발생할 수 있는 상대 경로 예외 방어 (`os.chdir(BASE_DIR)` 강제 고정)
 - 🎨 **3단계 오토 파이프라인 정돈기 (`pet_generator.py`)**:
   - `assets/` 신규 펫 폴더 탐지 ➔ 1초 배경 제거(마젠타 #FF00FF 크로마키 포함) ➔ 캐릭터 크롭 ➔ 1:1 정사각형 정중앙 배치 ➔ 자동 메뉴 추가
 

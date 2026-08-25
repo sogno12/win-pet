@@ -125,6 +125,10 @@ python main.py                # 펫 실행
 - [x] **[개선] 무설치 포터블 패키징 (`build_portable.py`) 리소스 완벽 동기화:**
   - [x] `dist/win_pet/` 루트에 `assets/`, `prompts/`, `pets.json`, `config.json`, `pc_targets.json` 자동 동기화 배치
   - [x] 포터블 실행 시 `BASE_DIR` 경로 일치 보장 및 빌드 임시 폴더(`build/`) 자동 정리
+- [x] **[개선] API 사용량(Token Usage) / Tool 호출 / 에러 실시간 로깅 & 이력 확인 메뉴 완비:**
+  - [x] 매 대화별 Gemini API 토큰 수(`Prompt`, `Candidate`, `Total`) 파싱 및 `logs/YYYY-MM-DD.log` 실시간 기록 ([`core/llm_client.py`](file:///d:/sjchoi/win_pet/core/llm_client.py))
+  - [x] 우클릭 / 트레이 메뉴에 `📋 실행 및 API 이력 로그 보기...` 및 `🚀 윈도우 시작 시 자동 실행` 연동 완비 ([`ui/pet_widget.py`](file:///d:/sjchoi/win_pet/ui/pet_widget.py), [`ui/tray_manager.py`](file:///d:/sjchoi/win_pet/ui/tray_manager.py))
+  - [x] 윈도우 시작 프로그램 자동 실행 시 CWD(`System32` 등) 경로 이탈 방어 로직 연동 (`main.py` ➔ `os.chdir(BASE_DIR)`)
 - [ ] **[TODO-3] 🎮 펫 퀴즈/미션 & 🎵 백그라운드 Lo-Fi BGM 플레이어**:
   - 심심함 해소 상식 퀴즈/습관 미션 및 집중용 백그라운드 음악 재생 연동.
 

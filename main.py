@@ -1,4 +1,13 @@
 import sys
+import os
+
+# 윈도우 시작 프로그램 자동 실행 시 작업 디렉터리(CWD)가 System32 등으로 변경되어 발생하는 경로 예외 완벽 방어
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(BASE_DIR)
+
 from PyQt6.QtWidgets import QApplication
 from ui.pet_widget import PetWidget
 from ui.tray_manager import TrayManager

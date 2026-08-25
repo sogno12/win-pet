@@ -309,6 +309,15 @@ class LLMClient:
             res = requests.post(url, headers=headers, json=payload, timeout=15)
             if res.status_code == 200:
                 data = res.json()
+                usage = data.get("usageMetadata", {})
+                if usage:
+                    PetLogger.log_api_usage(
+                        usage.get("promptTokenCount", 0),
+                        usage.get("candidatesTokenCount", 0),
+                        usage.get("totalTokenCount", 0),
+                        model_name
+                    )
+
                 candidate = data.get("candidates", [{}])[0]
                 parts = candidate.get("content", {}).get("parts", [])
                 
@@ -344,6 +353,8 @@ class LLMClient:
                     else:
                         exec_result = PCAgent.execute_tool(fn_name, fn_args)
                     
+                    PetLogger.log_tool(fn_name, fn_args, str(exec_result))
+
                     # 2. 2-Pass Gemini API 호출 (Function Response 전달하여 펫 성격별 피드백 대사 자동 수신)
                     contents.append({
                         "role": "model",
@@ -380,6 +391,14 @@ class LLMClient:
                         res2 = requests.post(url, headers=headers, json=pass2_payload, timeout=15)
                         if res2.status_code == 200:
                             data2 = res2.json()
+                            usage2 = data2.get("usageMetadata", {})
+                            if usage2:
+                                PetLogger.log_api_usage(
+                                    usage2.get("promptTokenCount", 0),
+                                    usage2.get("candidatesTokenCount", 0),
+                                    usage2.get("totalTokenCount", 0),
+                                    f"{model_name}-pass2"
+                                )
                             parts2 = data2.get("candidates", [{}])[0].get("content", {}).get("parts", [])
                             if parts2:
                                 for pt2 in parts2:
@@ -405,12 +424,16 @@ class LLMClient:
                     # 🚨 [행동 세이프티 가드] LLM이 말로만 "검색창을 띄워드릴게요", "메모장을 엽니다" 대사를 치고
                     # 툴을 안 부른 경우, 시스템이 키워드를 자동 감지하여 100% 실시간 강제 브라우저/앱 실행!
                     if any(kw in resp for kw in ["검색창을 띄워", "검색창을 열어", "구글 검색", "검색 결과를 띄워"]):
+                        PetLogger.log_tool("SafetyGuard:search_google", {"query": user_query}, "Triggered by keyword fallback")
                         PCAgent.search_google(user_query)
                     elif any(kw in resp for kw in ["유튜브 검색", "유튜브를 띄워", "유튜브를 열어"]):
+                        PetLogger.log_tool("SafetyGuard:search_youtube", {"query": user_query}, "Triggered by keyword fallback")
                         PCAgent.search_youtube(user_query)
                     elif any(kw in resp for kw in ["메모장을 띄워", "메모장을 열어", "메모장을 실행"]):
+                        PetLogger.log_tool("SafetyGuard:launch_app", {"app_name": "메모장"}, "Triggered by keyword fallback")
                         PCAgent.launch_app("메모장")
                     elif any(kw in resp for kw in ["계산기를 띄워", "계산기를 열어", "계산기를 실행"]):
+                        PetLogger.log_tool("SafetyGuard:launch_app", {"app_name": "계산기"}, "Triggered by keyword fallback")
                         PCAgent.launch_app("계산기")
 
                     PetLogger.log_pet(pet_key, resp)

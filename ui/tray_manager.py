@@ -57,11 +57,24 @@ class TrayManager:
         top_action = QAction(top_text, self.pet_widget)
         top_action.triggered.connect(self.pet_widget.toggle_always_on_top)
         menu.addAction(top_action)
-        
+
+        # 🚀 윈도우 시작 시 자동 실행 토글
+        autostart_action = QAction("🚀 윈도우 시작 시 자동 실행", self.pet_widget)
+        autostart_action.setCheckable(True)
+        autostart_action.setChecked(ConfigManager.is_autostart_enabled())
+        autostart_action.triggered.connect(self.pet_widget.toggle_autostart)
+        menu.addAction(autostart_action)
+
         # API 키 설정
         api_key_action = QAction("🔑 API 키 설정...", self.pet_widget)
         api_key_action.triggered.connect(self.pet_widget.open_api_key_dialog)
         menu.addAction(api_key_action)
+
+        # 📋 실행 및 API 이력 로그 보기
+        from core.logger import PetLogger
+        log_action = QAction("📋 실행 및 API 이력 로그 보기...", self.pet_widget)
+        log_action.triggered.connect(PetLogger.open_today_log)
+        menu.addAction(log_action)
 
         # 7. 숨기기 / 보이기 토글
         if self.pet_widget.isVisible():
