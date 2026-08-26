@@ -21,7 +21,7 @@ class PCAgent:
     # 기본 폴백 앱 매핑
     FALLBACK_APPS = {
         "notepad": {"name": "메모장", "exe": "notepad.exe", "aliases": ["메모장", "notepad"]},
-        "calc": {"name": "계산기", "exe": "CalculatorApp.exe", "aliases": ["계산기", "calc"]},
+        "calc": {"name": "계산기", "exe": "calc.exe", "aliases": ["계산기", "calc"]},
         "chrome": {"name": "크롬", "exe": "chrome.exe", "aliases": ["크롬", "chrome"]},
         "edge": {"name": "엣지", "exe": "msedge.exe", "aliases": ["엣지", "edge"]},
         "mspaint": {"name": "그림판", "exe": "mspaint.exe", "aliases": ["그림판", "paint"]},
@@ -99,14 +99,24 @@ class PCAgent:
         exe = info.get("exe")
         display_name = info.get("name", app_name)
         try:
-            subprocess.Popen(exe)
+            if hasattr(os, "startfile"):
+                os.startfile(exe)
+            else:
+                subprocess.Popen(exe, shell=True)
             msg = f"'{display_name}' 프로그램을 실행했습니다."
             PetLogger.log_tool("launch_app", {"app_name": app_name, "exe": exe}, msg)
             return msg
         except Exception as e:
-            err_msg = f"'{display_name}' 실행 실패: {str(e)}"
-            PetLogger.log_error(err_msg)
-            return err_msg
+            # os.startfile 실패 시 subprocess.Popen(exe, shell=True)로 2차 시도
+            try:
+                subprocess.Popen(exe, shell=True)
+                msg = f"'{display_name}' 프로그램을 실행했습니다."
+                PetLogger.log_tool("launch_app", {"app_name": app_name, "exe": exe}, msg)
+                return msg
+            except Exception as e2:
+                err_msg = f"'{display_name}' 실행 실패: {str(e2)}"
+                PetLogger.log_error(err_msg)
+                return err_msg
 
     @classmethod
     def close_app(cls, app_name: str) -> str:

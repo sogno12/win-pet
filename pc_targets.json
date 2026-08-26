@@ -11,7 +11,7 @@
     },
     "calc": {
       "name": "계산기",
-      "exe": "CalculatorApp.exe",
+      "exe": "calc.exe",
       "aliases": [
         "계산기",
         "calc",

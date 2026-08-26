@@ -386,8 +386,8 @@ class PetWidget(QWidget):
     def _handle_llm_response(self, response_text):
         self.speech_bubble.show_message(response_text, duration_ms=7000)
 
-    def build_size_menu(self, parent_menu):
-        size_menu = parent_menu.addMenu("📏 펫 크기")
+    def build_size_menu(self, parent_menu, title_override=""):
+        size_menu = parent_menu.addMenu(title_override or "📏 펫 크기")
         size_group = QActionGroup(self)
         size_group.setExclusive(True)
 
@@ -408,9 +408,9 @@ class PetWidget(QWidget):
             size_group.addAction(act)
             size_menu.addAction(act)
 
-    def build_speed_menu(self, parent_menu):
+    def build_speed_menu(self, parent_menu, title_override=""):
         """🐢 5단계 이동 속도 선택 서브메뉴 빌더"""
-        speed_menu = parent_menu.addMenu("🐢 펫 이동 속도")
+        speed_menu = parent_menu.addMenu(title_override or "🐢 펫 이동 속도")
         speed_group = QActionGroup(self)
         speed_group.setExclusive(True)
 
@@ -430,8 +430,8 @@ class PetWidget(QWidget):
             speed_group.addAction(act)
             speed_menu.addAction(act)
 
-    def build_boundary_menu(self, parent_menu):
-        boundary_menu = parent_menu.addMenu("📍 펫 이동 범위")
+    def build_boundary_menu(self, parent_menu, title_override=""):
+        boundary_menu = parent_menu.addMenu(title_override or "📍 펫 이동 범위")
 
         # 1. 언제든 다시 안개 영역을 확인하는 버튼
         preview_act = QAction("🔍 현재 이동 범위 미리보기 (안개 보기)", self)
@@ -466,8 +466,8 @@ class PetWidget(QWidget):
             boundary_group.addAction(act)
             boundary_menu.addAction(act)
 
-    def _build_pet_skin_menu(self, parent_menu):
-        pet_menu = parent_menu.addMenu("🐾 펫 스킨 변경")
+    def _build_pet_skin_menu(self, parent_menu, title_override=""):
+        pet_menu = parent_menu.addMenu(title_override or "🐾 펫 스킨 변경")
         pet_group = QActionGroup(self)
         pet_group.setExclusive(True)
 
@@ -615,72 +615,107 @@ class PetWidget(QWidget):
 
     def show_context_menu(self, global_pos):
         menu = QMenu(self)
-        self.pets_registry = ConfigManager.load_pets_registry()
-
-        # 1. 맨 위: 숨기기 (보통 바로 진행해야 하므로 맨 위 배치)
-        hide_action = QAction("🙈 펫 잠시 숨기기 (트레이 보관)", self)
-        hide_action.triggered.connect(self.hide_pet)
-        menu.addAction(hide_action)
-
-        menu.addSeparator()
-
-        # 2. 핵심 기능 그룹: 캡처 -> 일정 -> 타이머/포모도로
-        from ui.screen_capturer import ScreenCapturer
-        capture_action = QAction("📸 스마트 화면 캡처 (AI 분석 / OCR)", self)
-        capture_action.triggered.connect(self.trigger_screen_capture)
-        menu.addAction(capture_action)
-
-        calendar_action = QAction("📅 일정 / 할 일(TODO) 관리...", self)
-        calendar_action.triggered.connect(self.open_calendar_dialog)
-        menu.addAction(calendar_action)
-
-        timer_action = QAction("⏰ 펫 타이머 / 포모도로...", self)
-        timer_action.triggered.connect(self.open_timer_dialog)
-        menu.addAction(timer_action)
-
-        menu.addSeparator()
-
-        # 3. 펫 설정 및 화면 고정 그룹
-        top_text = "📌 맨 위 고정 해제" if self.is_always_on_top else "📌 항상 위에 표시"
-        toggle_top_action = QAction(top_text, self)
-        toggle_top_action.triggered.connect(self.toggle_always_on_top)
-        menu.addAction(toggle_top_action)
-
-        autostart_action = QAction("🚀 윈도우 시작 시 자동 실행", self)
-        autostart_action.setCheckable(True)
-        autostart_action.setChecked(ConfigManager.is_autostart_enabled())
-        autostart_action.triggered.connect(self.toggle_autostart)
-        menu.addAction(autostart_action)
-
-        self._build_pet_skin_menu(menu)
-        self.build_size_menu(menu)
-        self.build_speed_menu(menu)
-        self.build_boundary_menu(menu)
-
-        menu.addSeparator()
-
-        # 4. 펫 상태창 및 시스템 정보 그룹 (API 키 설정 위에 펫 상태창 배치)
-        status_action = QAction("📊 펫 상태창...", self)
-        status_action.triggered.connect(self.open_status_dialog)
-        menu.addAction(status_action)
-
-        api_key_action = QAction("🔑 API 키 설정...", self)
-        api_key_action.triggered.connect(self.open_api_key_dialog)
-        menu.addAction(api_key_action)
-
-        from core.logger import PetLogger
-        log_action = QAction("📋 실행 및 API 이력 로그 보기...", self)
-        log_action.triggered.connect(PetLogger.open_today_log)
-        menu.addAction(log_action)
-
-        menu.addSeparator()
-
-        # 5. 맨 아래: 종료
-        exit_action = QAction("❌ 종료", self)
-        exit_action.triggered.connect(self.quit_app)
-        menu.addAction(exit_action)
-
+        self.build_dynamic_menu(menu)
         menu.exec(global_pos)
+
+    def build_dynamic_menu(self, menu: QMenu):
+        """config.json의 menu_layout 설정에 따라 메뉴를 동적으로 구성 (기능별 온/오프 & 타이틀 커스텀)"""
+        from core.config_manager import DEFAULT_MENU_LAYOUT
+        self.config = ConfigManager.load_config()
+        self.pets_registry = ConfigManager.load_pets_registry()
+        layout_list = self.config.get("menu_layout", DEFAULT_MENU_LAYOUT)
+
+        last_was_separator = True  # 연속 구분선 중복 추가 방지
+
+        for item in layout_list:
+            if not isinstance(item, dict):
+                continue
+
+            # 구분선 처리
+            if item.get("type") == "separator":
+                if not last_was_separator:
+                    menu.addSeparator()
+                    last_was_separator = True
+                continue
+
+            # 비활성화(숨김) 메뉴 처리
+            if not item.get("enabled", True):
+                continue
+
+            item_id = item.get("id")
+            title = item.get("title", "")
+
+            added = True
+            if item_id == "hide_pet":
+                act = QAction(title or "🙈 펫 잠시 숨기기 (트레이 보관)", self)
+                act.triggered.connect(self.hide_pet)
+                menu.addAction(act)
+
+            elif item_id == "screen_capture":
+                act = QAction(title or "📸 스마트 화면 캡처 (AI 분석 / OCR)", self)
+                act.triggered.connect(self.trigger_screen_capture)
+                menu.addAction(act)
+
+            elif item_id == "calendar":
+                act = QAction(title or "📅 일정 / 할 일(TODO) 관리...", self)
+                act.triggered.connect(self.open_calendar_dialog)
+                menu.addAction(act)
+
+            elif item_id == "timer":
+                act = QAction(title or "⏰ 펫 타이머 / 포모도로...", self)
+                act.triggered.connect(self.open_timer_dialog)
+                menu.addAction(act)
+
+            elif item_id == "always_on_top":
+                top_text = "📌 맨 위 고정 해제" if self.is_always_on_top else (title or "📌 항상 위에 표시")
+                act = QAction(top_text, self)
+                act.triggered.connect(self.toggle_always_on_top)
+                menu.addAction(act)
+
+            elif item_id == "autostart":
+                act = QAction(title or "🚀 윈도우 시작 시 자동 실행", self)
+                act.setCheckable(True)
+                act.setChecked(ConfigManager.is_autostart_enabled())
+                act.triggered.connect(self.toggle_autostart)
+                menu.addAction(act)
+
+            elif item_id == "skin_change":
+                self._build_pet_skin_menu(menu, title_override=title)
+
+            elif item_id == "pet_size":
+                self.build_size_menu(menu, title_override=title)
+
+            elif item_id == "move_speed":
+                self.build_speed_menu(menu, title_override=title)
+
+            elif item_id == "move_range":
+                self.build_boundary_menu(menu, title_override=title)
+
+            elif item_id == "status_window":
+                act = QAction(title or "📊 펫 상태창...", self)
+                act.triggered.connect(self.open_status_dialog)
+                menu.addAction(act)
+
+            elif item_id == "api_key":
+                act = QAction(title or "🔑 API 키 설정...", self)
+                act.triggered.connect(self.open_api_key_dialog)
+                menu.addAction(act)
+
+            elif item_id == "log_view":
+                from core.logger import PetLogger
+                act = QAction(title or "📋 실행 및 API 이력 로그 보기...", self)
+                act.triggered.connect(PetLogger.open_today_log)
+                menu.addAction(act)
+
+            elif item_id == "quit":
+                act = QAction(title or "❌ 종료", self)
+                act.triggered.connect(self.quit_app)
+                menu.addAction(act)
+            else:
+                added = False
+
+            if added:
+                last_was_separator = False
 
     def change_pet(self, pet_key):
         self.current_pet = pet_key

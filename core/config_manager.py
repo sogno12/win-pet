@@ -14,6 +14,27 @@ CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 PETS_REGISTRY_PATH = os.path.join(BASE_DIR, "pets.json")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
+DEFAULT_MENU_LAYOUT = [
+    {"id": "hide_pet", "enabled": True, "title": "🙈 펫 잠시 숨기기 (트레이 보관)"},
+    {"type": "separator"},
+    {"id": "screen_capture", "enabled": True, "title": "📸 스마트 화면 캡처 (AI 분석 / OCR)"},
+    {"id": "calendar", "enabled": True, "title": "📅 일정 / 할 일(TODO) 관리..."},
+    {"id": "timer", "enabled": True, "title": "⏰ 펫 타이머 / 포모도로..."},
+    {"type": "separator"},
+    {"id": "always_on_top", "enabled": True, "title": "📌 항상 위에 표시"},
+    {"id": "autostart", "enabled": True, "title": "🚀 윈도우 시작 시 자동 실행"},
+    {"id": "skin_change", "enabled": True, "title": "🐾 펫 스킨 변경"},
+    {"id": "pet_size", "enabled": True, "title": "📏 펫 크기"},
+    {"id": "move_speed", "enabled": True, "title": "🐢 펫 이동 속도"},
+    {"id": "move_range", "enabled": True, "title": "📍 펫 이동 범위"},
+    {"type": "separator"},
+    {"id": "status_window", "enabled": True, "title": "📊 펫 상태창..."},
+    {"id": "api_key", "enabled": True, "title": "🔑 API 키 설정..."},
+    {"id": "log_view", "enabled": True, "title": "📋 실행 및 API 이력 로그 보기..."},
+    {"type": "separator"},
+    {"id": "quit", "enabled": True, "title": "❌ 종료"}
+]
+
 DEFAULT_CONFIG = {
     "current_pet": "owl_white",
     "llm_model": "gemini-3.1-flash-lite",
@@ -23,7 +44,8 @@ DEFAULT_CONFIG = {
     "move_speed": 1,
     "move_timer_ms": 70,
     "move_boundary_mode": "MEDIUM",
-    "anim_interval_ms": 140
+    "anim_interval_ms": 140,
+    "menu_layout": DEFAULT_MENU_LAYOUT
 }
 
 DEFAULT_PETS = {
@@ -43,7 +65,11 @@ class ConfigManager:
                     config.update(loaded)
             except Exception as e:
                 print(f"⚠️ 설정 로드 실패, 기본값 사용: {e}")
-                
+
+        if "menu_layout" not in config or not config["menu_layout"]:
+            config["menu_layout"] = DEFAULT_MENU_LAYOUT
+            ConfigManager.save_config(config)
+
         deprecated_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash"]
         if config.get("llm_model") in deprecated_models:
             config["llm_model"] = "gemini-3.1-flash-lite"
