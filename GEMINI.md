@@ -129,6 +129,10 @@ python main.py                # 펫 실행
   - [x] 매 대화별 Gemini API 토큰 수(`Prompt`, `Candidate`, `Total`) 파싱 및 `logs/YYYY-MM-DD.log` 실시간 기록 ([`core/llm_client.py`](file:///d:/sjchoi/win_pet/core/llm_client.py))
   - [x] 우클릭 / 트레이 메뉴에 `📋 실행 및 API 이력 로그 보기...` 및 `🚀 윈도우 시작 시 자동 실행` 연동 완비 ([`ui/pet_widget.py`](file:///d:/sjchoi/win_pet/ui/pet_widget.py), [`ui/tray_manager.py`](file:///d:/sjchoi/win_pet/ui/tray_manager.py))
   - [x] 윈도우 시작 프로그램 자동 실행 시 CWD(`System32` 등) 경로 이탈 방어 로직 연동 (`main.py` ➔ `os.chdir(BASE_DIR)`)
+- [x] **[개선] ⏰ 시간 연동 PC/정보 제어 액션 자동 예약 실행 연동 완비:**
+  - [x] `set_timer` 도구 및 `ScheduleAgent`에 `action_name`과 `action_args` 매개변수 확장 ([`core/schedule_agent.py`](file:///d:/sjchoi/win_pet/core/schedule_agent.py))
+  - [x] "5분 뒤 화면 잠금해줘", "10분 뒤 메모장 열어줘" 등의 요청 시 단순 알람만 뜨던 문제를 해결하여 타이머 만료 시 PC 화면 잠금(`lock_pc`), 앱 실행(`launch_app`), 앱 종료(`close_app`), 볼륨 조절(`adjust_volume`) 등 실제 액션이 백그라운드에서 자동 수행되도록 완전 자동화
+  - [x] `prompts/system_base.txt` 및 `llm_client.py` 툴 명세에 시간 연동 예약 액션 지침 명시 완료
 - [ ] **[TODO-3] 🎮 펫 퀴즈/미션 & 🎵 백그라운드 Lo-Fi BGM 플레이어**:
   - 심심함 해소 상식 퀴즈/습관 미션 및 집중용 백그라운드 음악 재생 연동.
 

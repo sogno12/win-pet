@@ -206,7 +206,7 @@ class LLMClient:
                 },
                 {
                     "name": "set_timer",
-                    "description": "일회성 타이머 또는 특정 시각 알람(예: 5시 5분 알람, 17:05 알람, 10분 뒤 타이머)을 설정합니다.",
+                    "description": "일회성 타이머 또는 특정 시각 알람(예: 5분 뒤 화면 잠금, 10분 뒤 메모장 열기, 17:05 알람 등)을 설정합니다. 사용자가 특정 시간 후 PC 제어 동작(화면 잠금, 앱 실행/종료, 볼륨 조절 등) 자동 실행을 요청할 때 action_name과 action_args를 함께 지정할 수 있습니다.",
                     "parameters": {
                         "type": "OBJECT",
                         "properties": {
@@ -220,7 +220,15 @@ class LLMClient:
                             },
                             "memo": {
                                 "type": "STRING",
-                                "description": "타이머 내용 또는 메모 (예: 약 먹기, 찌개 끄기, 알림 등)"
+                                "description": "타이머 내용 또는 메모 (예: 화면 잠금, 메모장 열기, 알림 등)"
+                            },
+                            "action_name": {
+                                "type": "STRING",
+                                "description": "타이머 만료 시 자동으로 실행할 PC 제어 또는 조회 도구 이름 (예: lock_pc, launch_app, close_app, adjust_volume, search_youtube 등). 필요 없으면 생략"
+                            },
+                            "action_args": {
+                                "type": "OBJECT",
+                                "description": "action_name 도구 실행 시 전달할 인자 객체 (예: launch_app인 경우 {'app_name': '메모장'}, close_app인 경우 {'app_name': '크롬'})"
                             }
                         }
                     }

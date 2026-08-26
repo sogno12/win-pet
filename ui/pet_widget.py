@@ -556,7 +556,8 @@ class PetWidget(QWidget):
         self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
         self.update_pet_image()
         # duration_ms=0: 유저가 클릭으로 확인할 때까지 영구 표시
-        self.speech_bubble.show_message(f"⏰ [알림] '{memo}' 시간이 다 되었어요! (클릭하여 확인)", duration_ms=0)
+        display_msg = memo if str(memo).startswith("⏰") else f"⏰ [알림] '{memo}' 시간이 다 되었어요!"
+        self.speech_bubble.show_message(f"{display_msg} (클릭하여 확인)", duration_ms=0)
 
     def _on_pomodoro_phase_changed(self, phase, msg, cycle_count, remaining_secs):
         if phase == "REST_START":

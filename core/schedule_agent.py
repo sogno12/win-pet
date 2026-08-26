@@ -37,8 +37,8 @@ class ScheduleAgent(QObject):
         self.clock.timeout.connect(self._on_tick)
         self.clock.start()
 
-    def add_timer(self, minutes: float = 0, memo: str = "타이머", target_time_str: str = "") -> str:
-        """1회성 타이머 또는 00초 정각 시각 알람 추가"""
+    def add_timer(self, minutes: float = 0, memo: str = "타이머", target_time_str: str = "", action_name: str = "", action_args: dict = None) -> str:
+        """1회성 타이머 또는 00초 정각 시각 알람 추가 (자동 액션 연동 지원)"""
         import datetime
         now_dt = datetime.datetime.now()
         target_dt = None
@@ -60,10 +60,11 @@ class ScheduleAgent(QObject):
                 except Exception:
                     target_dt = None
 
+        action_desc = f" ({action_name})" if action_name else ""
         if target_dt:
             end_time = target_dt.timestamp()
             time_display = target_dt.strftime("%H:%M:%S")
-            msg = f"⏰ [{memo}] {time_display} 정각 알람이 설정되었어요!"
+            msg = f"⏰ [{memo}] {time_display} 정각 알람{action_desc}이 설정되었어요!"
         else:
             secs = int(minutes * 60)
             if secs <= 0:
@@ -71,19 +72,21 @@ class ScheduleAgent(QObject):
             end_time = time.time() + secs
             m, s = divmod(secs, 60)
             if m > 0:
-                msg = f"⏰ [{memo}] {m}분 {s}초 후 타이머가 설정되었어요!"
+                msg = f"⏰ [{memo}] {m}분 {s}초 후 타이머{action_desc}가 설정되었어요!"
             else:
-                msg = f"⏰ [{memo}] {s}초 후 타이머가 설정되었어요!"
+                msg = f"⏰ [{memo}] {s}초 후 타이머{action_desc}가 설정되었어요!"
 
         timer_id = f"timer_{int(time.time()*1000)}"
         self.timers.append({
             "id": timer_id,
             "memo": memo,
             "end_time": end_time,
-            "initial_seconds": int(end_time - time.time())
+            "initial_seconds": int(end_time - time.time()),
+            "action_name": action_name,
+            "action_args": action_args or {}
         })
         
-        PetLogger.log_tool("add_timer", {"minutes": minutes, "target_time": target_time_str, "memo": memo}, msg)
+        PetLogger.log_tool("add_timer", {"minutes": minutes, "target_time": target_time_str, "memo": memo, "action_name": action_name, "action_args": action_args}, msg)
         return msg
 
     def cancel_timer(self, timer_id: str) -> str:
@@ -175,9 +178,28 @@ class ScheduleAgent(QObject):
         self.timers = remaining_timers
         
         for t in triggered:
-            msg = f"⏰ [알림] '{t['memo']}' 시간이 다 되었어요!"
-            PetLogger.log_tool("timer_triggered", {"id": t["id"]}, msg)
-            self.timer_triggered.emit(t["id"], t["memo"])
+            action_name = t.get("action_name", "")
+            action_args = t.get("action_args", {})
+            action_result_msg = ""
+            
+            if action_name:
+                try:
+                    from core.pc_agent import PCAgent
+                    from core.info_agent import InfoAgent
+                    if action_name in ["get_weather", "recommend_lunch"]:
+                        action_result_msg = InfoAgent.execute_tool(action_name, action_args)
+                    else:
+                        action_result_msg = PCAgent.execute_tool(action_name, action_args)
+                except Exception as e:
+                    action_result_msg = f"액션 '{action_name}' 실행 중 오류: {e}"
+            
+            if action_result_msg:
+                msg = f"⏰ [{t['memo']}] 시간이 다 되었어요! ({action_result_msg})"
+            else:
+                msg = f"⏰ [알림] '{t['memo']}' 시간이 다 되었어요!"
+                
+            PetLogger.log_tool("timer_triggered", {"id": t["id"], "action": action_name, "action_args": action_args}, msg)
+            self.timer_triggered.emit(t["id"], msg)
 
         # 2. 포모도로 체크
         if self.pomodoro["is_active"]:
@@ -220,7 +242,15 @@ class ScheduleAgent(QObject):
             minutes = args.get("minutes", 0)
             memo = args.get("memo", "알림")
             target_time_str = args.get("target_time_str", "")
-            return inst.add_timer(minutes=minutes, memo=memo, target_time_str=target_time_str)
+            action_name = args.get("action_name", "")
+            action_args = args.get("action_args", {})
+            return inst.add_timer(
+                minutes=minutes, 
+                memo=memo, 
+                target_time_str=target_time_str, 
+                action_name=action_name, 
+                action_args=action_args
+            )
         elif tool_name == "start_pomodoro":
             work_m = args.get("work_minutes", 25)
             rest_m = args.get("rest_minutes", 5)
