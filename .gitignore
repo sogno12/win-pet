@@ -58,3 +58,5 @@ build/
 dist/
 *.spec
 
+# Screenshots (캡처 이미지 - 개인 데이터)
+screenshots/

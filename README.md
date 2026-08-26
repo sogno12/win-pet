@@ -42,6 +42,17 @@
   - 부팅 시 작업 디렉터리(`CWD`)가 `System32` 등으로 이탈되어 발생할 수 있는 상대 경로 예외 방어 (`os.chdir(BASE_DIR)` 강제 고정)
 - 🎨 **3단계 오토 파이프라인 정돈기 (`pet_generator.py`)**:
   - `assets/` 신규 펫 폴더 탐지 ➔ 1초 배경 제거(마젠타 #FF00FF 크로마키 포함) ➔ 캐릭터 크롭 ➔ 1:1 정사각형 정중앙 배치 ➔ 자동 메뉴 추가
+- 📸 **스마트 화면 캡처 & Vision AI / OCR 분석 (`ui/screen_capturer.py`, `ui/dialog_capture_result.py`, `core/vision_agent.py`)**:
+  - **모니터별 독립 오버레이 (Windows 캡처 도구 방식)**: 연결된 모든 모니터에 각각 독립 오버레이를 띄워 경계 없이 깔끔하게 드래그 캡처
+  - **High DPI / 멀티 모니터 무결점 지원**: `PIL.ImageGrab` 물리 픽셀 좌표 변환으로 DPI 배율 왜곡·검은 공간 완전 제거
+  - `screenshots/` 자동 저장 + Windows 클립보드 즉시 복사(`Ctrl+V`)
+  - **AI 분석**: Gemini Vision 모델로 캡처 화면을 상세 분석 (에러 원인, UI 설명, 데이터 해석 등)
+  - **OCR**: 이미지 내 텍스트 추출 후 클립보드 자동 복사
+  - API 키 미설정 시 버튼 자동 비활성화 + Vision 미지원 모델 에러 친절 안내
+  - 분석 결과는 텍스트 길이 제한 없는 **스크롤 팝업 창 + 📋 전체 복사 버튼** 제공
+- 🙈 **펫 일괄 숨기기 / 다시 보이기 (`ui/pet_widget.py`, `ui/tray_manager.py`)**:
+  - 우클릭 `🙈 펫 잠시 숨기기 (트레이 보관)` → 펫 본체 + 말풍선 + 입력창 + 안개 일괄 숨김
+  - 트레이 아이콘 클릭 또는 `👀 펫 다시 보이기` 메뉴로 즉시 복원
 
 ---
 
@@ -145,6 +156,7 @@ win_pet/
 │   ├── info_agent.py        # 실시간 날씨 & 점심 추천
 │   ├── memory_agent.py      # 스마트 회상 & long_term_memory.json
 │   ├── status_agent.py      # 3대 상태지수 & status.json
+│   ├── vision_agent.py      # Gemini Vision 이미지 분석 & OCR
 │   ├── llm_client.py        # Gemini REST API 연동
 │   ├── persona_builder.py   # 어미 일관성 페르소나 (prompts/system_base.txt 연동)
 │   └── logger.py            # 날짜별 회전 로거
@@ -155,6 +167,8 @@ win_pet/
 ├── ui/                      # PyQt6 GUI 오버레이 & 팝업
 │   ├── pet_widget.py        # 메인 투명 펫 위젯 (비동기 QThread 에셋 정돈 연동)
 │   ├── range_overlay.py     # 몽환 반투명 안개 미리보기 UI
+│   ├── screen_capturer.py   # 📸 모니터별 드래그 캡처 오버레이 (멀티모니터 지원)
+│   ├── dialog_capture_result.py  # 📸 캡처 결과 팝업 & AI 분석/OCR UI
 │   ├── dialog_calendar.py   # 📅 일정 / 할 일(TODO) 관리창
 │   ├── dialog_timer.py      # ⏰ 펫 타이머 / 포모도로 관리창
 │   ├── dialog_status.py     # 📊 펫 상태창 팝업
@@ -162,6 +176,7 @@ win_pet/
 │   ├── dialog_input.py      # 대화 질의 입력창
 │   ├── speech_bubble.py     # 머리 위 실시간 말풍선
 │   └── tray_manager.py      # 시스템 트레이 아이콘 관리
+├── screenshots/             # 📸 캡처된 스크린샷 자동 저장 폴더
 ├── pc_targets.json          # PC 제어/종료 허용 프로그램 화이트리스트
 ├── schedules.json           # 통합 일정 및 할 일(TODO) 로컬 데이터
 ├── config.json              # 펫 크기, 속도, 안개 옵션 설정

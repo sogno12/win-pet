@@ -617,9 +617,18 @@ class PetWidget(QWidget):
         menu = QMenu(self)
         self.pets_registry = ConfigManager.load_pets_registry()
 
-        status_action = QAction("📊 펫 상태창...", self)
-        status_action.triggered.connect(self.open_status_dialog)
-        menu.addAction(status_action)
+        # 1. 맨 위: 숨기기 (보통 바로 진행해야 하므로 맨 위 배치)
+        hide_action = QAction("🙈 펫 잠시 숨기기 (트레이 보관)", self)
+        hide_action.triggered.connect(self.hide_pet)
+        menu.addAction(hide_action)
+
+        menu.addSeparator()
+
+        # 2. 핵심 기능 그룹: 캡처 -> 일정 -> 타이머/포모도로
+        from ui.screen_capturer import ScreenCapturer
+        capture_action = QAction("📸 스마트 화면 캡처 (AI 분석 / OCR)", self)
+        capture_action.triggered.connect(self.trigger_screen_capture)
+        menu.addAction(capture_action)
 
         calendar_action = QAction("📅 일정 / 할 일(TODO) 관리...", self)
         calendar_action.triggered.connect(self.open_calendar_dialog)
@@ -631,6 +640,7 @@ class PetWidget(QWidget):
 
         menu.addSeparator()
 
+        # 3. 펫 설정 및 화면 고정 그룹
         top_text = "📌 맨 위 고정 해제" if self.is_always_on_top else "📌 항상 위에 표시"
         toggle_top_action = QAction(top_text, self)
         toggle_top_action.triggered.connect(self.toggle_always_on_top)
@@ -648,6 +658,12 @@ class PetWidget(QWidget):
         self.build_boundary_menu(menu)
 
         menu.addSeparator()
+
+        # 4. 펫 상태창 및 시스템 정보 그룹 (API 키 설정 위에 펫 상태창 배치)
+        status_action = QAction("📊 펫 상태창...", self)
+        status_action.triggered.connect(self.open_status_dialog)
+        menu.addAction(status_action)
+
         api_key_action = QAction("🔑 API 키 설정...", self)
         api_key_action.triggered.connect(self.open_api_key_dialog)
         menu.addAction(api_key_action)
@@ -657,10 +673,9 @@ class PetWidget(QWidget):
         log_action.triggered.connect(PetLogger.open_today_log)
         menu.addAction(log_action)
 
-        hide_action = QAction("🙈 숨기기 (트레이로)", self)
-        hide_action.triggered.connect(self.hide)
-        menu.addAction(hide_action)
+        menu.addSeparator()
 
+        # 5. 맨 아래: 종료
         exit_action = QAction("❌ 종료", self)
         exit_action.triggered.connect(self.quit_app)
         menu.addAction(exit_action)
@@ -786,6 +801,50 @@ class PetWidget(QWidget):
 
         if not preview_rect.isEmpty():
             RangeOverlay.show_preview(preview_rect, always_on=self.is_range_overlay_always_on)
+
+    def hide_pet(self):
+        """펫 본체, 말풍선, 대화창, 안개 오버레이 일괄 숨기기"""
+        self.hide()
+        if hasattr(self, 'speech_bubble'):
+            self.speech_bubble.hide_bubble()
+        if hasattr(self, 'dialog_input'):
+            self.dialog_input.hide()
+        from ui.range_overlay import RangeOverlay
+        RangeOverlay.hide_overlay()
+        if self.tray_manager:
+            self.tray_manager.update_tray_menu()
+
+    def show_pet(self):
+        """숨겨진 펫 다시 보여주기"""
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        if self.tray_manager:
+            self.tray_manager.update_tray_menu()
+
+    def toggle_visibility(self):
+        if self.isVisible():
+            self.hide_pet()
+        else:
+            self.show_pet()
+
+    def trigger_screen_capture(self):
+        """📸 스마트 화면 영역 캡처 시작"""
+        from ui.screen_capturer import ScreenCapturer
+        ScreenCapturer.start_capture()
+        inst = ScreenCapturer._instance
+        if inst:
+            try:
+                inst.captured_signal.disconnect()
+            except Exception:
+                pass
+            inst.captured_signal.connect(self._on_captured)
+
+    def _on_captured(self, image_path):
+        """캡처 완료 후 팝업 UI 표시"""
+        from ui.dialog_capture_result import DialogCaptureResult
+        dlg = DialogCaptureResult(image_path, self)
+        dlg.exec()
 
     def quit_app(self):
         if hasattr(self, 'speech_bubble'):

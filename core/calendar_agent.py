@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import time
 import datetime
@@ -7,13 +8,18 @@ from core.logger import PetLogger
 from core.info_agent import InfoAgent
 from core.status_agent import StatusAgent
 
+if getattr(sys, 'frozen', False):
+    _BASE_DIR = os.path.dirname(sys.executable)
+else:
+    _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 class CalendarAgent(QObject):
     """통합 일정(시작일시) 및 할일(마감일시 TODO)과 아침 브리핑/사전 알림을 관리하는 에이전트"""
 
     schedule_reminded = pyqtSignal(str, str, str)  # (id, title, remind_type) -> 사전 알림
     briefing_ready = pyqtSignal(str)              # (briefing_text) -> 아침 브리핑
 
-    SCHEDULES_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "schedules.json")
+    SCHEDULES_PATH = os.path.join(_BASE_DIR, "schedules.json")
     _instance = None
 
     @classmethod

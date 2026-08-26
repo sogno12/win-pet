@@ -1,4 +1,5 @@
 import os
+import sys
 import ctypes
 import subprocess
 import webbrowser
@@ -7,10 +8,15 @@ from core.logger import PetLogger
 
 import json
 
+if getattr(sys, 'frozen', False):
+    _BASE_DIR = os.path.dirname(sys.executable)
+else:
+    _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 class PCAgent:
     """Windows PC 제어 및 자동화를 수행하는 클래스"""
 
-    PC_TARGETS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pc_targets.json")
+    PC_TARGETS_PATH = os.path.join(_BASE_DIR, "pc_targets.json")
 
     # 기본 폴백 앱 매핑
     FALLBACK_APPS = {
