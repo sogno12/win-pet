@@ -40,6 +40,11 @@
 - 🚀 **윈도우 시작 시 자동 실행 & CWD 경로 방어 (`main.py`, `core/config_manager.py`)**:
   - 우클릭 및 트레이 메뉴 `🚀 윈도우 시작 시 자동 실행` 토글 지원 (Windows 시작 프로그램 레지스트리 자동 등록)
   - 부팅 시 작업 디렉터리(`CWD`)가 `System32` 등으로 이탈되어 발생할 수 있는 상대 경로 예외 방어 (`os.chdir(BASE_DIR)` 강제 고정)
+- 💼 **All-in-Win 자산관리 포트폴리오 연동 Agent (`core/asset_agent.py`)**:
+  - `all-in-win/data/summary.json` 경량 요약 데이터(총자산, 원금, 손익, 수익률, TOP 3 자산, 비중) 0.001초 파싱
+  - Gemini 대화 연동 (`get_asset_summary`, `open_asset_dashboard` 2-Pass Function Calling)
+  - FastAPI 대시보드 미실행 시 백그라운드 프로세스 자동 구동 및 웹 브라우저(`http://127.0.0.1:8000`) 즉시 호출
+  - 펫 우클릭 및 트레이 메뉴에 `💼 올인윈(All-in-Win) 자산관리` 서브메뉴 완비
 - 🎨 **3단계 오토 파이프라인 정돈기 (`pet_generator.py`)**:
   - `assets/` 신규 펫 폴더 탐지 ➔ 1초 배경 제거(마젠타 #FF00FF 크로마키 포함) ➔ 캐릭터 크롭 ➔ 1:1 정사각형 정중앙 배치 ➔ 자동 메뉴 추가
 - 📸 **스마트 화면 캡처 & Vision AI / OCR 분석 (`ui/screen_capturer.py`, `ui/dialog_capture_result.py`, `core/vision_agent.py`)**:
@@ -150,6 +155,7 @@ python tools/skin_calibrator.py --ref assets/my_pet/walk_0.png --folder assets/m
 win_pet/
 ├── assets/                  # 픽셀 아트 프레임 이미지 (owl_white, fox_orange 등)
 ├── core/                    # 전문 비즈니스 모듈
+│   ├── asset_agent.py       # All-in-Win 자산관리 대시보드 & 요약 데이터 연동
 │   ├── pc_agent.py          # PC 제어 및 안전 종료 (pc_targets.json 연동)
 │   ├── calendar_agent.py    # 통합 일정/TODO 관리 & 아침 1회 브리핑
 │   ├── schedule_agent.py    # 1회성 타이머 & 포모도로 스케줄러

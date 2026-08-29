@@ -613,6 +613,20 @@ class PetWidget(QWidget):
         dlg = DialogStatus(self)
         dlg.exec()
 
+    def open_asset_dashboard(self):
+        """All-in-Win 자산관리 대시보드 웹 열기"""
+        from core.asset_agent import AssetAgent
+        msg = AssetAgent.open_dashboard()
+        self.speech_bubble.show_message(msg, duration_ms=5000)
+
+    def show_asset_summary(self):
+        """All-in-Win 자산 요약 말풍선 브리핑"""
+        from core.asset_agent import AssetAgent
+        summary = AssetAgent.get_asset_summary()
+        self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
+        self.update_pet_image()
+        self.speech_bubble.show_message(summary, duration_ms=12000)
+
     def show_context_menu(self, global_pos):
         menu = QMenu(self)
         self.build_dynamic_menu(menu)
@@ -665,6 +679,16 @@ class PetWidget(QWidget):
                 act = QAction(title or "⏰ 펫 타이머 / 포모도로...", self)
                 act.triggered.connect(self.open_timer_dialog)
                 menu.addAction(act)
+
+            elif item_id == "asset_management":
+                asset_menu = menu.addMenu(title or "💼 올인윈(All-in-Win) 자산관리")
+                open_asset_dash_action = QAction("📊 대시보드 웹 열기 (http://127.0.0.1:8000)", self)
+                open_asset_dash_action.triggered.connect(self.open_asset_dashboard)
+                asset_menu.addAction(open_asset_dash_action)
+
+                asset_summary_action = QAction("💰 내 자산 요약 브리핑 듣기", self)
+                asset_summary_action.triggered.connect(self.show_asset_summary)
+                asset_menu.addAction(asset_summary_action)
 
             elif item_id == "always_on_top":
                 top_text = "📌 맨 위 고정 해제" if self.is_always_on_top else (title or "📌 항상 위에 표시")

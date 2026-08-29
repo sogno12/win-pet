@@ -165,6 +165,13 @@ python main.py                # 펫 실행
 - [x] **[버그 수정] 🖥️ 계산기 및 Windows 앱 실행 에러(`[WinError 2]`) 완전 수정:**
   - [x] `pc_targets.json` 및 `core/pc_agent.py` 내 계산기 실행 파일명(`calc.exe`) 교체
   - [x] Windows Shell API (`os.startfile`) 적용 ➔ PATH 미등록 레지스트리 앱(크롬, 엣지, 카카오톡 등) 및 모든 등록 앱 100% 정상 구동 완비 ([`core/pc_agent.py`](file:///d:/sjchoi/win_pet/core/pc_agent.py))
+- [x] **[TODO-3] 💼 All-in-Win 자산관리 포트폴리오 연동 도구 (`AssetAgent` & Gemini Tools):**
+  - [x] `all-in-win/data/summary.json` 경량 요약 데이터(총자산, 원금, 손익, 수익률, TOP 3 자산, 비중) 0.001초 파싱 (`core/asset_agent.py`)
+  - [x] Gemini Function Calling 도구(`get_asset_summary`, `open_asset_dashboard`) 및 2-Pass 대화 연동
+  - [x] FastAPI 대시보드 미실행 시 백그라운드 프로세스 자동 구동 및 웹 브라우저(`http://127.0.0.1:8000`) 즉시 호출
+  - [x] 펫 우클릭 및 트레이 메뉴에 `💼 올인윈(All-in-Win) 자산관리` 서브메뉴 완비
+- [ ] **[TODO-4] 🎮 펫 퀴즈/미션 & 🎵 백그라운드 Lo-Fi BGM 플레이어**:
+  - 심심함 해소 상식 퀴즈/습관 미션 및 집중용 백그라운드 음악 재생 연동.
 
 ---
 

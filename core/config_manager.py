@@ -20,6 +20,7 @@ DEFAULT_MENU_LAYOUT = [
     {"id": "screen_capture", "enabled": True, "title": "📸 스마트 화면 캡처 (AI 분석 / OCR)"},
     {"id": "calendar", "enabled": True, "title": "📅 일정 / 할 일(TODO) 관리..."},
     {"id": "timer", "enabled": True, "title": "⏰ 펫 타이머 / 포모도로..."},
+    {"id": "asset_management", "enabled": True, "title": "💼 올인윈(All-in-Win) 자산관리"},
     {"type": "separator"},
     {"id": "always_on_top", "enabled": True, "title": "📌 항상 위에 표시"},
     {"id": "autostart", "enabled": True, "title": "🚀 윈도우 시작 시 자동 실행"},

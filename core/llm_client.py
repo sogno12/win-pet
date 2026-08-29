@@ -257,6 +257,22 @@ class LLMClient:
                         "type": "OBJECT",
                         "properties": {}
                     }
+                },
+                {
+                    "name": "get_asset_summary",
+                    "description": "사용자의 All-in-Win 자산관리 포트폴리오 현황(총 평가자산, 총 투자원금, 누적 손익, 수익률, 비중 상위 자산, 자산군별 비중)을 조회합니다. 사용자가 '내 자산 얼마야?', '자산 현황 알려줘', '수익률 어때?', '포트폴리오 비중' 등을 물어볼 때 호출하세요.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {}
+                    }
+                },
+                {
+                    "name": "open_asset_dashboard",
+                    "description": "All-in-Win 자산관리 웹 대시보드(http://127.0.0.1:8000)를 웹 브라우저로 엽니다. 사용자가 '올인윈 켜줘', '자산관리 대시보드 열어줘', '포트폴리오 화면 띄워줘' 등을 요청할 때 호출하세요.",
+                    "parameters": {
+                        "type": "OBJECT",
+                        "properties": {}
+                    }
                 }
             ]
         }
@@ -358,6 +374,9 @@ class LLMClient:
                     elif fn_name in ["add_schedule", "get_today_schedule", "get_morning_briefing"]:
                         from core.calendar_agent import CalendarAgent
                         exec_result = CalendarAgent.execute_tool(fn_name, fn_args)
+                    elif fn_name in ["get_asset_summary", "open_asset_dashboard"]:
+                        from core.asset_agent import AssetAgent
+                        exec_result = AssetAgent.execute_tool(fn_name, fn_args)
                     else:
                         exec_result = PCAgent.execute_tool(fn_name, fn_args)
                     
@@ -443,6 +462,10 @@ class LLMClient:
                     elif any(kw in resp for kw in ["계산기를 띄워", "계산기를 열어", "계산기를 실행"]):
                         PetLogger.log_tool("SafetyGuard:launch_app", {"app_name": "계산기"}, "Triggered by keyword fallback")
                         PCAgent.launch_app("계산기")
+                    elif any(kw in resp for kw in ["자산 대시보드", "올인윈 대시보드", "자산관리 대시보드", "올인윈을 띄워", "올인윈을 열어", "자산관리를 띄워", "자산관리를 열어"]):
+                        PetLogger.log_tool("SafetyGuard:open_asset_dashboard", {}, "Triggered by keyword fallback")
+                        from core.asset_agent import AssetAgent
+                        AssetAgent.open_dashboard()
 
                     PetLogger.log_pet(pet_key, resp)
                     MemoryAgent.save_interaction(user_query, resp)
