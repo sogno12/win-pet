@@ -116,6 +116,7 @@ python build_portable.py
 
 - **빌드 결과물 위치**: `dist/win_pet/`
 - **배포 안내**: 생성된 `dist/win_pet/` 폴더 전체를 압축하여 비개발자분께 전달하시면, 사용자는 파이썬 설치 없이 `win_pet.exe` 파일만 더블 클릭해서 바로 펫을 소환할 수 있습니다. (폴더 내 `비개발자_사용법_안내.txt` 동봉)
+- **안전한 덮어쓰기 업데이트**: 새 버전을 빌드 후 `dist/win_pet/` 폴더 안의 내용 전체를 기존 사용 폴더에 그대로 덮어씌워도(Copy & Overwrite), **기존 사용자의 개인 설정(`config.json`), 등록 펫 정보(`pets.json`), API 키(`.env`), 일정/할일(`schedules.json`), 펫 친밀도(`status.json`), 장기 기억(`long_term_memory.json`)이 100% 안심하고 유지**되며 신규 펫/기능만 자동 병합됩니다.
 
 ---
 

@@ -11,7 +11,9 @@ else:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
+CONFIG_TEMPLATE_PATH = os.path.join(BASE_DIR, "config.json.template")
 PETS_REGISTRY_PATH = os.path.join(BASE_DIR, "pets.json")
+PETS_TEMPLATE_PATH = os.path.join(BASE_DIR, "pets.json.template")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
 DEFAULT_MENU_LAYOUT = [
@@ -54,11 +56,22 @@ DEFAULT_PETS = {
 }
 
 class ConfigManager:
-    """설정 데이터 및 펫 레지스트리 관리 클래스 (임시 분할 코드 전면 제거 완료)"""
+    """설정 데이터 및 펫 레지스트리 관리 클래스"""
     
     @staticmethod
     def load_config():
         config = DEFAULT_CONFIG.copy()
+
+        # 1. 템플릿 파일이 존재하면 기본값 구조 적용
+        if os.path.exists(CONFIG_TEMPLATE_PATH):
+            try:
+                with open(CONFIG_TEMPLATE_PATH, "r", encoding="utf-8") as f:
+                    tmpl = json.load(f)
+                    config.update(tmpl)
+            except Exception as e:
+                print(f"⚠️ config.json.template 로드 실패: {e}")
+
+        # 2. 유저 config.json 파일 존재 여부 확인 (유저 커스텀 설정 100% 최우선)
         if os.path.exists(CONFIG_PATH):
             try:
                 with open(CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -66,6 +79,9 @@ class ConfigManager:
                     config.update(loaded)
             except Exception as e:
                 print(f"⚠️ 설정 로드 실패, 기본값 사용: {e}")
+        else:
+            # 최초 실행 시 template 또는 DEFAULT_CONFIG 기반으로 config.json 작성
+            ConfigManager.save_config(config)
 
         if "menu_layout" not in config or not config["menu_layout"]:
             config["menu_layout"] = DEFAULT_MENU_LAYOUT
@@ -88,14 +104,44 @@ class ConfigManager:
 
     @classmethod
     def load_pets_registry(cls):
-        """pets.json 레지스트리를 단일 기준으로 읽어오며, 파일에서 삭제하거나 비활성화한 설정을 100% 존중합니다."""
+        """pets.json 레지스트리를 읽어오며, 템플릿에 신규 펫이 추가된 경우 기존 유저 데이터 훼손 없이 자동 병합합니다."""
+        pets_data = {}
+
+        # 1. 템플릿 기본 펫 정보 로드
+        if os.path.exists(PETS_TEMPLATE_PATH):
+            try:
+                with open(PETS_TEMPLATE_PATH, "r", encoding="utf-8") as f:
+                    pets_data = json.load(f)
+            except Exception:
+                pass
+
+        if not pets_data:
+            pets_data = DEFAULT_PETS.copy()
+
+        # 2. 유저의 pets.json 존재 여부 확인
         if os.path.exists(PETS_REGISTRY_PATH):
             try:
                 with open(PETS_REGISTRY_PATH, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    user_pets = json.load(f)
+
+                    # 템플릿에 새로 추가된 공식 펫 스킨이 있다면 유저 pets.json에만 신규 추가 (기존 유저 수정값 보존)
+                    has_new_pet = False
+                    for pet_key, pet_info in pets_data.items():
+                        if pet_key not in user_pets:
+                            user_pets[pet_key] = pet_info
+                            has_new_pet = True
+
+                    if has_new_pet:
+                        cls.save_pets_registry(user_pets)
+
+                    return user_pets
             except Exception as e:
-                pass
-        return DEFAULT_PETS.copy()
+                print(f"⚠️ pets.json 로드 실패: {e}")
+                return pets_data
+        else:
+            # 최초 실행 시 pets.json 작성
+            cls.save_pets_registry(pets_data)
+            return pets_data
 
     @classmethod
     def get_dynamic_salt(cls) -> bytes:

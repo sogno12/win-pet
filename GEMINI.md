@@ -30,7 +30,7 @@ python main.py                # 펫 실행
 > 외부 AI 이미지 생성 API를 파이썬 스크립트에서 자동 호출하여 펫 이미지를 만들어내는 방식은 **해부학적 왜곡(다리가 5~6개로 렌더링되는 문제, 얼굴 뚫림, 컷 간 캐릭터 불일치, 저품질 렌더링)**으로 인해 **100% 사용 불가함이 검증 완료되었습니다.**
 > 따라서 펫 에셋은 사용자가 직접 준비한 고품질 이미지를 `pet_generator.py`의 **3단계 오토 파이프라인 (스마트 배경 제거 ➔ 캐릭터 크롭 ➔ 1:1 정사각형 정중앙 배치)**을 통해 정돈하여 탑재하는 방식을 정식 스펙으로 채택합니다.
 
-> **⚠️ [PyInstaller 포터블 빌드 경로 정책 — 절대 준수]**
+> **⚠️ [PyInstaller 포터블 빌드 경로 & 설정 보존 정책 — 절대 준수]**
 > 모든 Python 소스 파일에서 데이터 파일(`config.json`, `schedules.json`, `logs/`, `screenshots/` 등)의 경로를 계산할 때, **`__file__` 단독 사용은 금지**입니다.
 > PyInstaller로 빌드된 `.exe`에서 `__file__`은 `_internal/` 내부 임시 경로를 가리키므로, 데이터 파일이 `_internal/` 안에 생성되어 사용자에게 보이지 않는 버그가 발생합니다.
 >
@@ -44,6 +44,7 @@ python main.py                # 펫 실행
 > ```
 > - `core/` 및 `ui/` 내 신규 모듈 작성 시 위 패턴을 **파일 최상단에 반드시** 삽입할 것.
 > - 기존 모듈 수정 시에도 `__file__` 단독 경로를 발견하면 즉시 위 패턴으로 교체할 것.
+> - **포터블 배포본(`dist/win_pet/`)에는 유저 가변 데이터 파일(`config.json`, `pets.json`) 대신 `.template` 파일로 제공**하여 사용자가 배포 폴더를 덮어쓰더라도 기존 설정 및 개인 데이터가 100% 보존되도록 유지할 것.
 
 ---
 
@@ -137,8 +138,11 @@ python main.py                # 펫 실행
   - [x] 임의의 `assets/` 스캔 주입 로직 제거 ➔ `pets.json` 삭제/비활성화 시 100% 즉시 반영
   - [x] 신규 펫 등록 시 `species`, `tone`, `speech_style` 기본 템플릿 필드 오프라인 자동 완성 완비
   - [x] Windows CP949 콘솔 인코딩 예외 크래시 방어 완비
-- [x] **[개선] 무설치 포터블 패키징 (`build_portable.py`) 리소스 완벽 동기화:**
-  - [x] `dist/win_pet/` 루트에 `assets/`, `prompts/`, `pets.json`, `config.json`, `pc_targets.json` 자동 동기화 배치
+- [x] **[개선] 무설치 포터블 패키징 (`build_portable.py`) 리소스 동기화 & 덮어쓰기 유저 설정 완전 보호:**
+  - [x] `config.json.template`, `pets.json.template` 배포 ➔ `dist/win_pet/` 덮어쓰기 복사 시 유저 기존 설정(`config.json`), API키(`.env`), 펫데이터(`pets.json`), 일정, 기억 100% 원형 보존
+  - [x] `ConfigManager.load_config()` & `load_pets_registry()` 스마트 병합 ➔ 신규 설정/공식 펫 스킨 유저 데이터 훼손 없이 자동 병합
+  - [x] `brotlicffi` 불완전 CFFI 모듈 충돌 소스 코드 레벨 원천 차단 (`main.py` ➔ `sys.modules['brotlicffi'] = None`)
+  - [x] 환경 오염 없는 `wincat` Conda 가상환경 자동 탐지 & 최적 슬림 빌드(다이어트) 구동 지원
   - [x] 포터블 실행 시 `BASE_DIR` 경로 일치 보장 및 빌드 임시 폴더(`build/`) 자동 정리
 - [x] **[개선] API 사용량(Token Usage) / Tool 호출 / 에러 실시간 로깅 & 이력 확인 메뉴 완비:**
   - [x] 매 대화별 Gemini API 토큰 수(`Prompt`, `Candidate`, `Total`) 파싱 및 `logs/YYYY-MM-DD.log` 실시간 기록 ([`core/llm_client.py`](file:///d:/sjchoi/win_pet/core/llm_client.py))

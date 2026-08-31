@@ -1,0 +1,16 @@
+{
+  "current_pet": "owl_white",
+  "llm_model": "gemini-3.1-flash-lite",
+  "pet_width": 48,
+  "pet_height": 48,
+  "is_always_on_top": true,
+  "move_speed": 1,
+  "move_timer_ms": 70,
+  "move_boundary_mode": "MEDIUM",
+  "anim_interval_ms": 140,
+  "session_timeout_minutes": 30,
+  "range_preview_duration_ms": 1500,
+  "range_overlay_show_border": true,
+  "range_overlay_color": "#E6F0FF",
+  "range_overlay_opacity": 0.25
+}

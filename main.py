@@ -1,6 +1,10 @@
 import sys
 import os
 
+# PyInstaller 포터블 환경에서 urllib3가 불완전한 C-extension brotli 모듈을 로드해 발생하는 AttributeError 100% 원천 차단
+sys.modules['brotlicffi'] = None
+sys.modules['brotli'] = None
+
 # 윈도우 시작 프로그램 자동 실행 시 작업 디렉터리(CWD)가 System32 등으로 변경되어 발생하는 경로 예외 완벽 방어
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(sys.executable)
