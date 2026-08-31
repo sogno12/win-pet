@@ -47,6 +47,7 @@ class PetWidget(QWidget):
         self.move_speed = self.config.get("move_speed", 1)
         self.move_timer_ms = self.config.get("move_timer_ms", 70)  # 기본값 70ms (천천히)
         self.boundary_mode = self.config.get("move_boundary_mode", "MEDIUM")
+        self.custom_boundary_rect = self.config.get("custom_boundary_rect")
         self.is_range_overlay_always_on = False
 
         # 💡 발걸음 프레임 속도 자동 싱크
@@ -204,6 +205,23 @@ class PetWidget(QWidget):
             limit_right = min(limit_right, cloud_right)
             limit_top = max(limit_top, cloud_top)
             limit_bottom = min(limit_bottom, cloud_bottom)
+        elif self.boundary_mode == "CUSTOM":
+            custom_rect = self.config.get("custom_boundary_rect")
+            if custom_rect and isinstance(custom_rect, dict):
+                c_left = custom_rect.get("x", limit_left)
+                c_right = custom_rect.get("x", 0) + custom_rect.get("width", 300) - self.pet_width
+                c_top = custom_rect.get("y", limit_top)
+                c_bottom = custom_rect.get("y", 0) + custom_rect.get("height", 300) - self.pet_height
+
+                limit_left = max(limit_left, c_left)
+                limit_right = min(limit_right, c_right)
+                limit_top = max(limit_top, c_top)
+                limit_bottom = min(limit_bottom, c_bottom)
+
+                if limit_left > limit_right:
+                    limit_right = limit_left
+                if limit_top > limit_bottom:
+                    limit_bottom = limit_top
         elif self.boundary_mode == "MONITOR":
             pass
         elif self.boundary_mode == "FREE":
@@ -445,6 +463,11 @@ class PetWidget(QWidget):
         toggle_always_act.triggered.connect(self.toggle_always_on_boundary_overlay)
         boundary_menu.addAction(toggle_always_act)
 
+        # 3. 마우스 드래그 커스텀 영역 지정 버튼
+        custom_act = QAction("📐 커스텀 직사각형 범위 직접 지정...", self)
+        custom_act.triggered.connect(self.open_custom_range_selector)
+        boundary_menu.addAction(custom_act)
+
         boundary_menu.addSeparator()
 
         boundary_group = QActionGroup(self)
@@ -454,6 +477,7 @@ class PetWidget(QWidget):
             ("🤏 구석에서 놀기 (반경 60px)", "VERY_NARROW"),
             ("🐾 좁게 (반경 120px)", "NARROW"),
             ("🏡 아늑하게 (반경 280px)", "MEDIUM"),
+            ("📐 커스텀 직사각형 범위 (지정됨)", "CUSTOM"),
             ("🖥️ 현재 모니터 안에서만", "MONITOR"),
             ("🌐 자유롭게 (전체 바탕화면)", "FREE")
         ]
@@ -465,6 +489,38 @@ class PetWidget(QWidget):
             act.triggered.connect(lambda checked, m=mode: self.change_boundary_mode(m))
             boundary_group.addAction(act)
             boundary_menu.addAction(act)
+
+    def open_custom_range_selector(self):
+        """마우스 드래그로 커스텀 안개 영역을 지정하는 선택창 오픈"""
+        from ui.range_selector import RangeSelector
+        RangeSelector.start_selection(
+            callback_on_selected=self._on_custom_range_selected
+        )
+
+    def _on_custom_range_selected(self, rect):
+        """커스텀 직사각형 범위 지정 완료 콜백"""
+        if rect.isEmpty():
+            return
+
+        self.custom_boundary_rect = {
+            "x": rect.x(),
+            "y": rect.y(),
+            "width": rect.width(),
+            "height": rect.height()
+        }
+        self.config["custom_boundary_rect"] = self.custom_boundary_rect
+        ConfigManager.save_config(self.config)
+
+        self.change_boundary_mode("CUSTOM")
+
+        # 펫 위치가 지정 범위를 벗어났으면 내부로 안전 이동
+        pet_x = self.x()
+        pet_y = self.y()
+        target_x = max(rect.x(), min(pet_x, rect.x() + rect.width() - self.pet_width))
+        target_y = max(rect.y(), min(pet_y, rect.y() + rect.height() - self.pet_height))
+        self.move(target_x, target_y)
+
+        self.speech_bubble.show_message("📐 커스텀 직사각형 안개 이동 범위가 지정되었어요!", duration_ms=5000)
 
     def _build_pet_skin_menu(self, parent_menu, title_override=""):
         pet_menu = parent_menu.addMenu(title_override or "🐾 펫 스킨 변경")
@@ -852,6 +908,15 @@ class PetWidget(QWidget):
         elif mode == "MEDIUM":
             radius = 280
             preview_rect = QRect(cx - radius, cy - radius, radius * 2, radius * 2)
+        elif mode == "CUSTOM":
+            custom_rect = self.config.get("custom_boundary_rect")
+            if custom_rect and isinstance(custom_rect, dict):
+                preview_rect = QRect(
+                    custom_rect.get("x", 0),
+                    custom_rect.get("y", 0),
+                    custom_rect.get("width", 300),
+                    custom_rect.get("height", 300)
+                )
         elif mode == "MONITOR":
             preview_rect = screen_geo
         elif mode == "FREE":

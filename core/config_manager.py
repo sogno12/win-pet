@@ -47,6 +47,7 @@ DEFAULT_CONFIG = {
     "move_speed": 1,
     "move_timer_ms": 70,
     "move_boundary_mode": "MEDIUM",
+    "custom_boundary_rect": None,
     "anim_interval_ms": 140,
     "menu_layout": DEFAULT_MENU_LAYOUT
 }

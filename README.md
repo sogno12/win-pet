@@ -6,10 +6,11 @@
 
 ## ✨ 핵심 주요 기능
 
-- 🐾 **투명 픽셀 보행 & 몽환 안개 오버레이 UI (`ui/range_overlay.py`)**:
+- 🐾 **투명 픽셀 보행 & 몽환 안개 오버레이 UI (`ui/range_overlay.py`, `ui/range_selector.py`)**:
   - 60FPS의 부드러운 자율 보행/대기 애니메이션 (상하좌우/대각선 2D 이동)
   - `🔍 현재 이동 범위 미리보기 (안개 보기)` 및 `👁️ 이동 범위 안개 항상 켜기 (테스트 고정용)` 지원
-  - 5단계 세분화 이동 범위 (`🤏 매우 좁게` ~ `🌐 자유롭게`) 및 `config.json` 커스텀 안개 외곽선/색상/투명도 지원
+  - **📐 마우스 드래그 커스텀 이동 범위 지정 UI (`ui/range_selector.py`)**: 화면 상단/하단 줄, 특정 직사각형 영역 등을 마우스 드래그로 직접 자유롭게 지정
+  - 5단계 세분화 이동 범위 (`🤏 매우 좁게` ~ `🌐 자유롭게`, `📐 커스텀`) 및 `config.json` 커스텀 안개 외곽선/색상/투명도 지원
 - 💬 **Gemini LLM 대화 & 프롬프트 외부 분리 (`prompts/system_base.txt`, `core/persona_builder.py`)**:
   - `prompts/system_base.txt`로 공통 행동 수칙 분리 (메모장으로 누구나 손쉽게 수정 가능)
   - `pets.json` 동적 펫 레지스트리 기반 어미 일관성 규칙 (`speech_style`) 및 2-Pass 대사 생성
