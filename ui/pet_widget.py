@@ -208,15 +208,15 @@ class PetWidget(QWidget):
         elif self.boundary_mode == "CUSTOM":
             custom_rect = self.config.get("custom_boundary_rect")
             if custom_rect and isinstance(custom_rect, dict):
-                c_left = custom_rect.get("x", limit_left)
+                c_left = custom_rect.get("x", 0)
                 c_right = custom_rect.get("x", 0) + custom_rect.get("width", 300) - self.pet_width
-                c_top = custom_rect.get("y", limit_top)
+                c_top = custom_rect.get("y", 0)
                 c_bottom = custom_rect.get("y", 0) + custom_rect.get("height", 300) - self.pet_height
 
-                limit_left = max(limit_left, c_left)
-                limit_right = min(limit_right, c_right)
-                limit_top = max(limit_top, c_top)
-                limit_bottom = min(limit_bottom, c_bottom)
+                limit_left = c_left
+                limit_right = c_right
+                limit_top = c_top
+                limit_bottom = c_bottom
 
                 if limit_left > limit_right:
                     limit_right = limit_left
@@ -519,6 +519,7 @@ class PetWidget(QWidget):
         target_x = max(rect.x(), min(pet_x, rect.x() + rect.width() - self.pet_width))
         target_y = max(rect.y(), min(pet_y, rect.y() + rect.height() - self.pet_height))
         self.move(target_x, target_y)
+        self.origin_center = self.pos()
 
         self.speech_bubble.show_message("📐 커스텀 직사각형 안개 이동 범위가 지정되었어요!", duration_ms=5000)
 

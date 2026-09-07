@@ -146,7 +146,35 @@ class ConfigManager:
 
     @classmethod
     def get_dynamic_salt(cls) -> bytes:
-        """하드코딩 키 없이, 사용자의 머신 식별자(UUID/System Host)를 동적 결합한 무결점 솔트 생성"""
+        """Windows 고유 MachineGuid 및 사용자 계정명을 결합한 재부팅 시에도 절대 변하지 않는 영구 고정 솔트 생성"""
+        import platform
+        import getpass
+        
+        machine_id = ""
+        if os.name == 'nt':
+            try:
+                import winreg
+                key = winreg.OpenKey(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    r"SOFTWARE\Microsoft\Cryptography",
+                    0,
+                    winreg.KEY_READ | winreg.KEY_WOW64_64KEY
+                )
+                machine_id, _ = winreg.QueryValueEx(key, "MachineGuid")
+                winreg.CloseKey(key)
+            except Exception:
+                pass
+
+        if not machine_id:
+            machine_id = platform.node()
+
+        user_name = getpass.getuser()
+        salt_str = f"win_pet_stable_salt_{machine_id}_{user_name}"
+        return salt_str.encode("utf-8")
+
+    @classmethod
+    def get_legacy_salt(cls) -> bytes:
+        """기존 uuid.getnode() 기반 레거시 솔트 (마이그레이션 호환용)"""
         import uuid
         import platform
         node_id = str(uuid.getnode())
@@ -155,10 +183,15 @@ class ConfigManager:
         return salt_str.encode("utf-8")
 
     @classmethod
-    def _xor_cipher(cls, data: bytes) -> bytes:
-        """동적 머신 고유 솔트를 이용한 XOR 비트 대칭 암호화/복호화"""
-        salt_bytes = cls.get_dynamic_salt()
+    def _xor_cipher_with_salt(cls, data: bytes, salt_bytes: bytes) -> bytes:
+        """지정된 솔트를 이용한 XOR 비트 대칭 암호화/복호화"""
         return bytes([b ^ salt_bytes[i % len(salt_bytes)] for i, b in enumerate(data)])
+
+    @classmethod
+    def _xor_cipher(cls, data: bytes) -> bytes:
+        """고정 머신 솔트를 이용한 기본 XOR 암호화/복호화"""
+        salt_bytes = cls.get_dynamic_salt()
+        return cls._xor_cipher_with_salt(data, salt_bytes)
 
     @classmethod
     def encode_key(cls, raw_key: str) -> str:
@@ -174,25 +207,57 @@ class ConfigManager:
 
     @classmethod
     def decode_key(cls, enc_key: str) -> str:
-        """Secret Salt XOR 복호화"""
+        """Secret Salt XOR 복호화 (신규 고정 솔트 우선 -> 레거시 솔트 마이그레이션 -> 깨진 키 가비지 차단)"""
         if not enc_key:
             return ""
         if enc_key.startswith("ENC_XOR:"):
+            cipher_b64 = enc_key[8:]
             try:
-                cipher_b64 = enc_key[8:]
                 cipher_bytes = base64.b64decode(cipher_b64.encode("utf-8"))
-                raw_bytes = cls._xor_cipher(cipher_bytes)
-                return raw_bytes.decode("utf-8")
             except Exception:
                 return ""
+
+            # 1. 신규 영구 고정 머신 솔트로 복호화 시도
+            try:
+                raw_bytes = cls._xor_cipher(cipher_bytes)
+                candidate = raw_bytes.decode("utf-8")
+                if candidate.startswith("AIzaSy") or (candidate.isascii() and candidate.isprintable() and len(candidate) >= 30):
+                    return candidate
+            except Exception:
+                pass
+
+            # 2. 레거시(uuid.getnode) 솔트로 복호화 시도 (이전 버전 호환 및 자동 승격 마이그레이션)
+            try:
+                legacy_salt = cls.get_legacy_salt()
+                raw_bytes_legacy = cls._xor_cipher_with_salt(cipher_bytes, legacy_salt)
+                candidate_legacy = raw_bytes_legacy.decode("utf-8")
+                if candidate_legacy.startswith("AIzaSy") or (candidate_legacy.isascii() and candidate_legacy.isprintable() and len(candidate_legacy) >= 30):
+                    try:
+                        cls.save_api_key(candidate_legacy)
+                    except Exception:
+                        pass
+                    return candidate_legacy
+            except Exception:
+                pass
+
+            # 복호화 실패 시 가비지 문자열 반환을 방지하여 API 401 오류 차단
+            return ""
+
         elif enc_key.startswith("ENC:"):
-            # 이전 하위 호환
+            # 이전 Base64 하위 호환
             try:
                 raw_b64 = enc_key[4:]
-                return base64.b64decode(raw_b64.encode("utf-8")).decode("utf-8")
+                raw = base64.b64decode(raw_b64.encode("utf-8")).decode("utf-8")
+                if raw.isascii() and raw.isprintable() and len(raw) >= 20:
+                    return raw
             except Exception:
                 return ""
-        return enc_key
+
+        # 암호화 접두사가 없는 원본 키인 경우
+        if enc_key.startswith("AIzaSy") or (enc_key.isascii() and enc_key.isprintable() and len(enc_key) >= 20):
+            return enc_key
+
+        return ""
 
     @classmethod
     def get_api_key(cls) -> str:

@@ -170,6 +170,13 @@ python main.py                # 펫 실행
 - [x] **[버그 수정] 🖥️ 계산기 및 Windows 앱 실행 에러(`[WinError 2]`) 완전 수정:**
   - [x] `pc_targets.json` 및 `core/pc_agent.py` 내 계산기 실행 파일명(`calc.exe`) 교체
   - [x] Windows Shell API (`os.startfile`) 적용 ➔ PATH 미등록 레지스트리 앱(크롬, 엣지, 카카오톡 등) 및 모든 등록 앱 100% 정상 구동 완비 ([`core/pc_agent.py`](file:///d:/sjchoi/win_pet/core/pc_agent.py))
+- [x] **[버그 수정 & 보안 강화] 🔑 Windows MachineGuid 불변 암호화 솔트 & API 키 입력 보안 마스킹:**
+  - [x] 재부팅 시 네트워크 MAC 변동으로 복호화가 깨져 401 오류가 발생하던 문제를 Windows OS 고유 레지스트리 ID(`MachineGuid`) 기반 솔트로 영구 안정화 ([`core/config_manager.py`](file:///d:/sjchoi/win_pet/core/config_manager.py))
+  - [x] 깨진 키/가비지 문자열 복호화 차단 및 레거시 솔트 자동 승격 마이그레이션 적용
+  - [x] API 키 설정 팝업에 비밀번호 마스킹(`••••••••`), `👁️ 보기/숨기기` 토글 및 키 형식 검증 UI 구축 ([`ui/dialog_api_key.py`](file:///d:/sjchoi/win_pet/ui/dialog_api_key.py))
+- [x] **[버그 수정 & UX 개선] 📐 듀얼/멀티 모니터 커스텀 이동 범위 완벽 지원:**
+  - [x] 단일 가상 윈도우(`virtualGeometry`) 방식 폐기 ➔ 모니터별 1:1 독립 오버레이(`MonitorRangeOverlay`) 전면 개편으로 음수 좌표 클리핑 및 모니터 경계/DPI 사각형 잘림 버그 완벽 해결 ([`ui/range_selector.py`](file:///d:/sjchoi/win_pet/ui/range_selector.py))
+  - [x] 펫 보행 계산 시 현재 모니터 경계로 강제 클램핑하던 로직 해제 ➔ 타 모니터 커스텀 영역으로도 자유로운 이동 및 기준점(`origin_center`) 자동 동기화 완비 ([`ui/pet_widget.py`](file:///d:/sjchoi/win_pet/ui/pet_widget.py))
 - [x] **[TODO-3] 💼 All-in-Win 자산관리 포트폴리오 연동 도구 (`AssetAgent` & Gemini Tools):**
   - [x] `all-in-win/data/summary.json` 경량 요약 데이터(총자산, 원금, 손익, 수익률, TOP 3 자산, 비중) 0.001초 파싱 (`core/asset_agent.py`)
   - [x] Gemini Function Calling 도구(`get_asset_summary`, `open_asset_dashboard`) 및 2-Pass 대화 연동
