@@ -184,12 +184,11 @@ class ScheduleAgent(QObject):
             
             if action_name:
                 try:
-                    from core.pc_agent import PCAgent
-                    from core.info_agent import InfoAgent
-                    if action_name in ["get_weather", "recommend_lunch"]:
-                        action_result_msg = InfoAgent.execute_tool(action_name, action_args)
-                    else:
-                        action_result_msg = PCAgent.execute_tool(action_name, action_args)
+                    from core import tool_registry
+                    action_result_msg = tool_registry.execute(
+                        action_name, action_args,
+                        allowed_agents=tool_registry.TIMER_ACTION_AGENTS,
+                    )
                 except Exception as e:
                     action_result_msg = f"액션 '{action_name}' 실행 중 오류: {e}"
             

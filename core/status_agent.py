@@ -1,17 +1,13 @@
 import os
-import sys
 import json
 from datetime import datetime
 from core.logger import PetLogger
+from core import paths
 
 class StatusAgent:
     """펫의 3대 상태지수 (친밀도, 행복도, 심심함) 관리 및 방치 감지 모듈"""
 
-    if getattr(sys, 'frozen', False):
-        BASE_DIR = os.path.dirname(sys.executable)
-    else:
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    STATUS_PATH = os.path.join(BASE_DIR, "status.json")
+    STATUS_PATH = paths.STATUS_PATH
     DATETIME_FORMAT = "%Y/%m/%d %H:%M:%S"
 
     DEFAULT_STATUS = {

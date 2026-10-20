@@ -35,8 +35,8 @@ class VisionAgent:
         config = ConfigManager.load_config()
         model_name = config.get("llm_model", "gemini-3.1-flash-lite").strip()
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-        headers = {"Content-Type": "application/json"}
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+        headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}  # 키는 URL이 아닌 헤더로 (예외 메시지/로그 노출 방지)
 
         payload = {
             "systemInstruction": {

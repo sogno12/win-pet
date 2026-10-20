@@ -3,18 +3,12 @@ import os
 import json
 import base64
 
-if getattr(sys, 'frozen', False):
-    # PyInstaller 포터블 바이너리로 실행 중일 때 (.exe 위치)
-    BASE_DIR = os.path.dirname(sys.executable)
-else:
-    # 파이썬 소스 스크립트로 실행 중일 때
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
-CONFIG_TEMPLATE_PATH = os.path.join(BASE_DIR, "config.json.template")
-PETS_REGISTRY_PATH = os.path.join(BASE_DIR, "pets.json")
-PETS_TEMPLATE_PATH = os.path.join(BASE_DIR, "pets.json.template")
-ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+# 경로는 core/paths.py에서 관리. 기존 코드(pet_generator, asset_loader 등)가
+# config_manager에서 가져다 쓰고 있어서 같은 이름으로 다시 내보냄
+from core.paths import (  # noqa: F401
+    BASE_DIR, CONFIG_PATH, CONFIG_TEMPLATE_PATH, ENV_PATH,
+    PETS_REGISTRY_PATH, PETS_TEMPLATE_PATH, ASSETS_DIR,
+)
 
 DEFAULT_MENU_LAYOUT = [
     {"id": "hide_pet", "enabled": True, "title": "🙈 펫 잠시 숨기기 (트레이 보관)"},
@@ -262,7 +256,7 @@ class ConfigManager:
     @classmethod
     def get_api_key(cls) -> str:
         """.env 파일 전용으로 난독화된 GEMINI_API_KEY를 읽어 복호화 반환합니다."""
-        env_file = os.path.join(BASE_DIR, ".env")
+        env_file = ENV_PATH
         if os.path.exists(env_file):
             try:
                 with open(env_file, "r", encoding="utf-8") as f:
@@ -290,7 +284,7 @@ class ConfigManager:
         """API 키를 난독화하여 .env 파일 전용으로 보관하고 config.json에서는 완벽 제거합니다."""
         clean_key = raw_key.strip()
         enc_key = cls.encode_key(clean_key)
-        env_file = os.path.join(BASE_DIR, ".env")
+        env_file = ENV_PATH
 
         # 1. .env 파일에 난독화 API 키 작성
         try:

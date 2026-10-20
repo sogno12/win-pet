@@ -1,19 +1,15 @@
 import os
-import sys
 import json
 from datetime import datetime
 from core.config_manager import ConfigManager
 from core.logger import PetLogger
+from core import paths
 
 class MemoryAgent:
     """단기 세션 대화 및 독립된 5개 태그/중요도 기반 장기기억(long_term_memory.json) 관리 모듈"""
 
-    if getattr(sys, 'frozen', False):
-        BASE_DIR = os.path.dirname(sys.executable)
-    else:
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    SHORT_MEMORY_PATH = os.path.join(BASE_DIR, "memory.json")
-    LONG_MEMORY_PATH = os.path.join(BASE_DIR, "long_term_memory.json")
+    SHORT_MEMORY_PATH = paths.SHORT_MEMORY_PATH
+    LONG_MEMORY_PATH = paths.LONG_MEMORY_PATH
     DATETIME_FORMAT = "%Y/%m/%d %H:%M:%S"
 
     # 표준 5개 카테고리 태그

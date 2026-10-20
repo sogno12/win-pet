@@ -1,5 +1,4 @@
 import os
-import sys
 import ctypes
 import subprocess
 import webbrowser
@@ -8,15 +7,12 @@ from core.logger import PetLogger
 
 import json
 
-if getattr(sys, 'frozen', False):
-    _BASE_DIR = os.path.dirname(sys.executable)
-else:
-    _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from core import paths
 
 class PCAgent:
     """Windows PC 제어 및 자동화를 수행하는 클래스"""
 
-    PC_TARGETS_PATH = os.path.join(_BASE_DIR, "pc_targets.json")
+    PC_TARGETS_PATH = paths.PC_TARGETS_PATH
 
     # 기본 폴백 앱 매핑
     FALLBACK_APPS = {
@@ -80,43 +76,29 @@ class PCAgent:
 
     @classmethod
     def launch_app(cls, app_name: str) -> str:
-        """지정한 애플리케이션을 안전하게 실행합니다."""
+        """pc_targets.json에 등록된 애플리케이션만 실행합니다 (셸 미사용)."""
         info = cls._find_target(app_name)
-        
+
         if not info:
-            # 화이트리스트 외 임의 실행 차단 또는 윈도우 기본 런처 전달
-            try:
-                clean_name = app_name.strip()
-                subprocess.Popen(clean_name, shell=True)
-                msg = f"'{app_name}' 실행 명령을 전달했습니다."
-                PetLogger.log_tool("launch_app", {"app_name": app_name}, msg)
-                return msg
-            except Exception as e:
-                err_msg = f"'{app_name}' 실행 실패: {str(e)}"
-                PetLogger.log_error(err_msg)
-                return err_msg
-        
+            # LLM이 만든 문자열을 셸로 넘기지 않도록 미등록 앱은 차단
+            msg = f"안전을 위해 pc_targets.json에 등록된 프로그램만 실행할 수 있어요. ('{app_name}'은(는) 목록에 없습니다.)"
+            PetLogger.log_tool("launch_app", {"app_name": app_name}, msg)
+            return msg
+
         exe = info.get("exe")
         display_name = info.get("name", app_name)
         try:
             if hasattr(os, "startfile"):
-                os.startfile(exe)
+                os.startfile(exe)  # ShellExecute: App Paths(chrome.exe 등)까지 해석
             else:
-                subprocess.Popen(exe, shell=True)
+                subprocess.Popen([exe])
             msg = f"'{display_name}' 프로그램을 실행했습니다."
             PetLogger.log_tool("launch_app", {"app_name": app_name, "exe": exe}, msg)
             return msg
         except Exception as e:
-            # os.startfile 실패 시 subprocess.Popen(exe, shell=True)로 2차 시도
-            try:
-                subprocess.Popen(exe, shell=True)
-                msg = f"'{display_name}' 프로그램을 실행했습니다."
-                PetLogger.log_tool("launch_app", {"app_name": app_name, "exe": exe}, msg)
-                return msg
-            except Exception as e2:
-                err_msg = f"'{display_name}' 실행 실패: {str(e2)}"
-                PetLogger.log_error(err_msg)
-                return err_msg
+            err_msg = f"'{display_name}' 실행 실패: {str(e)}"
+            PetLogger.log_error(err_msg)
+            return err_msg
 
     @classmethod
     def close_app(cls, app_name: str) -> str:
@@ -138,8 +120,7 @@ class PCAgent:
 
         try:
             # 1. Graceful 종료 시도 (강제 /F 없이 창 닫기 신호 전송)
-            cmd = f'taskkill /IM "{exe}"'
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            result = subprocess.run(["taskkill", "/IM", exe], capture_output=True, text=True)
             
             if result.returncode == 0:
                 msg = f"'{display_name}' 프로그램을 안전하게 종료했습니다."

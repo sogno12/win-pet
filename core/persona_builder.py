@@ -1,12 +1,8 @@
 import os
-import sys
 import json
 from core.config_manager import ConfigManager
 
-if getattr(sys, 'frozen', False):
-    _BASE_DIR = os.path.dirname(sys.executable)
-else:
-    _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from core import paths
 
 class PersonaBuilder:
     """펫의 키워드(종류, 성격/말투)와 중앙 프롬프트 지침을 결합하여 systemInstruction을 만드는 모듈"""
@@ -21,8 +17,8 @@ class PersonaBuilder:
         "4. 대답은 2~3문장 이내로 친절하고 다정하게 대화를 나누어라."
     )
 
-    PROMPT_BASE_PATH = os.path.join(_BASE_DIR, "prompts", "system_base.txt")
-    PETS_JSON_PATH = os.path.join(_BASE_DIR, "pets.json")
+    PROMPT_BASE_PATH = paths.PROMPT_BASE_PATH
+    PETS_JSON_PATH = paths.PETS_REGISTRY_PATH
 
     @classmethod
     def get_base_instruction(cls) -> str:

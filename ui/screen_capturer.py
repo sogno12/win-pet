@@ -1,23 +1,16 @@
 import os
-import sys
 import datetime
 from PyQt6.QtCore import Qt, QRect, QPoint, pyqtSignal, QObject
 from PyQt6.QtGui import QPainter, QColor, QPen, QGuiApplication, QPixmap, QImage, QScreen
 from PyQt6.QtWidgets import QWidget, QApplication
 from core.logger import PetLogger
+from core.paths import SCREENSHOTS_DIR
 
 try:
     from PIL import ImageGrab
     HAS_PIL_GRAB = True
 except ImportError:
     HAS_PIL_GRAB = False
-
-
-def _get_base_dir() -> str:
-    """PyInstaller 빌드/개발 환경 모두에서 프로젝트 루트(exe 또는 main.py 위치)를 반환"""
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)   # dist/win_pet/
-    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 개발: 프로젝트 루트
 
 
 class MonitorOverlay(QWidget):
@@ -202,7 +195,7 @@ class ScreenCapturer(QObject):
         self._close_all()
 
         # 1. screenshots/ 폴더에 저장 (빌드/개발 환경 모두 exe/main.py 옆에 생성)
-        save_dir = os.path.join(_get_base_dir(), "screenshots")
+        save_dir = SCREENSHOTS_DIR
         os.makedirs(save_dir, exist_ok=True)
 
         now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

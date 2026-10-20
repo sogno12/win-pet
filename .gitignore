@@ -58,5 +58,9 @@ build/
 dist/
 *.spec
 
+# 펫 에셋 정돈 전 원본 백업 (pet_generator가 생성)
+assets_raw/
+assets/mp4
+
 # Screenshots (캡처 이미지 - 개인 데이터)
 screenshots/

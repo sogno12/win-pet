@@ -1,12 +1,8 @@
 import os
-import sys
 import logging
 from datetime import datetime
 
-if getattr(sys, 'frozen', False):
-    _BASE_DIR = os.path.dirname(sys.executable)
-else:
-    _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from core.paths import LOGS_DIR
 
 class PetLogger:
     """일별 로그 파일 생성 및 펫 대화/툴콜/에러 로깅 모듈"""
@@ -18,7 +14,7 @@ class PetLogger:
         if cls._logger is not None:
             return cls._logger
 
-        log_dir = os.path.join(_BASE_DIR, "logs")
+        log_dir = LOGS_DIR
         os.makedirs(log_dir, exist_ok=True)
 
         today_str = datetime.now().strftime("%Y-%m-%d")
@@ -77,7 +73,7 @@ class PetLogger:
 
     @classmethod
     def get_today_log_path(cls) -> str:
-        log_dir = os.path.join(_BASE_DIR, "logs")
+        log_dir = LOGS_DIR
         today_str = datetime.now().strftime("%Y-%m-%d")
         return os.path.join(log_dir, f"{today_str}.log")
 

@@ -63,7 +63,7 @@ class PetWidget(QWidget):
         self.direction_y = 0
         self.facing_direction = 1
 
-        self.state = "WALK" # "WALK", "IDLE", "DRAG", "HAPPY", "SPECIAL"
+        self.state = "WALK" # "WALK", "IDLE", "DRAG", "HAPPY", "SPECIAL", "THINK"
         self.tray_manager = None
         self.llm_worker = None
 
@@ -153,28 +153,36 @@ class PetWidget(QWidget):
             self.current_pet, self.pet_width, self.pet_height
         )
 
+    def _current_frames(self, side=None):
+        """현재 상태에 맞는 프레임 리스트 (side: "r"/"l", 생략 시 바라보는 방향)"""
+        side = side or ("r" if self.facing_direction == 1 else "l")
+        is_dialog_open = hasattr(self, 'dialog_input') and self.dialog_input.isVisible()
+        if self.state == "THINK":
+            key = "think"
+        elif self.state == "IDLE" or self.is_hovered or is_dialog_open:
+            key = "idle"
+        elif self.state == "HAPPY":
+            key = "happy"
+        elif self.state == "SPECIAL":
+            key = "special"
+        else:
+            key = "walk"
+        return self.anim_frames.get(f"{key}_{side}") or self.anim_frames.get(f"idle_{side}")
+
     def update_pet_image(self):
         if self.is_dragging:
-            pix = self.anim_frames["drag_r"] if self.facing_direction == 1 else self.anim_frames["drag_l"]
-            self.label.setPixmap(pix)
+            frames = self.anim_frames["drag_rs"] if self.facing_direction == 1 else self.anim_frames["drag_ls"]
+            self.label.setPixmap(frames[self.current_frame_idx % len(frames)])
             return
 
-        current_list = self.anim_frames["walk_r"] if self.facing_direction == 1 else self.anim_frames["walk_l"]
-        is_dialog_open = hasattr(self, 'dialog_input') and self.dialog_input.isVisible()
-        if self.state == "IDLE" or self.is_hovered or is_dialog_open:
-            current_list = self.anim_frames["idle_r"] if self.facing_direction == 1 else self.anim_frames["idle_l"]
-        elif self.state == "HAPPY":
-            current_list = self.anim_frames["happy_r"] if self.facing_direction == 1 else self.anim_frames["happy_l"]
-        elif self.state == "SPECIAL":
-            current_list = self.anim_frames["special_r"] if self.facing_direction == 1 else self.anim_frames["special_l"]
-
+        current_list = self._current_frames()
         if current_list:
             idx = self.current_frame_idx % len(current_list)
             self.label.setPixmap(current_list[idx])
 
     def update_movement(self):
         is_dialog_open = hasattr(self, 'dialog_input') and self.dialog_input.isVisible()
-        if self.is_dragging or self.is_hovered or is_dialog_open or self.state in ["IDLE", "DRAG", "SPECIAL"]:
+        if self.is_dragging or self.is_hovered or is_dialog_open or self.state in ["IDLE", "DRAG", "HAPPY", "SPECIAL", "THINK"]:
             if self.speech_bubble.isVisible():
                 self.speech_bubble.update_position()
             return
@@ -258,22 +266,12 @@ class PetWidget(QWidget):
             self.speech_bubble.update_position()
 
     def update_animation(self):
-        if self.is_dragging or self.state == "DRAG":
-            self.update_pet_image()
-            return
-
-        current_list = self.anim_frames["walk_r"]
-        is_dialog_open = hasattr(self, 'dialog_input') and self.dialog_input.isVisible()
-        if self.state == "IDLE" or self.is_hovered or is_dialog_open:
-            current_list = self.anim_frames["idle_r"]
-        elif self.state == "HAPPY":
-            current_list = self.anim_frames.get("happy_r") or self.anim_frames.get("idle_r")
-        elif self.state == "SPECIAL":
-            current_list = self.anim_frames.get("special_r") or self.anim_frames.get("idle_r")
-
+        if self.is_dragging:
+            current_list = self.anim_frames["drag_rs"]  # 드래그 중엔 버둥거리는 동작 반복
+        else:
+            current_list = self._current_frames("r")
         if current_list:
             self.current_frame_idx = (self.current_frame_idx + 1) % len(current_list)
-
         self.update_pet_image()
 
     def update_behavior_state(self):
@@ -285,19 +283,42 @@ class PetWidget(QWidget):
         if rand < 0.25:
             self.state = "IDLE"
             QTimer.singleShot(random.randint(3000, 5000), self.resume_walking)
-        elif rand < 0.35 and self.anim_frames["special_r"]:
+        elif rand < 0.35 and self.anim_frames.get("has_special"):
             self.state = "SPECIAL"
-            QTimer.singleShot(random.randint(4000, 6000), self.resume_walking)
+            self.current_frame_idx = 0
+            # 등록된 특수 동작(special/ 하위 폴더별) 중 하나를 랜덤 선택
+            self.anim_frames["special_r"], self.anim_frames["special_l"] = self._next_special_set()
+            # 특수 동작은 처음부터 끝까지 정확히 한 번 재생 (최소 3초)
+            play_ms = len(self.anim_frames["special_r"]) * self.anim_interval
+            QTimer.singleShot(max(3000, play_ms), self.resume_walking)
         else:
             self.state = "WALK"
             self.direction_x = random.choice([-1, 1])
             self.direction_y = random.choice([-1, 0, 1])
             self.facing_direction = self.direction_x
 
+    def _next_special_set(self):
+        """특수 동작을 섞은 순서로 하나씩 꺼냄 (모든 동작을 한 번씩 보여준 뒤 다시 섞음 → 한 가지만 연달아 나오지 않음)"""
+        sets = self.anim_frames["special_sets"]
+        bag = getattr(self, "_special_bag", None)
+        if not bag or getattr(self, "_special_bag_src", None) is not sets:
+            bag = list(range(len(sets)))
+            random.shuffle(bag)
+            last = getattr(self, "_last_special", None)
+            if len(bag) > 1 and bag[0] == last:  # 섞은 직후에도 직전 동작이 바로 반복되지 않게
+                bag.append(bag.pop(0))
+            self._special_bag, self._special_bag_src = bag, sets
+        self._last_special = bag.pop(0)
+        return sets[self._last_special]
+
     def resume_walking(self):
         is_dialog_open = hasattr(self, 'dialog_input') and self.dialog_input.isVisible()
         if not self.is_dragging and not self.is_hovered and not is_dialog_open and not self.speech_bubble.isVisible():
             self.state = "WALK"
+
+    def _set_happy_or_idle(self):
+        """알림/브리핑 반응: happy 전용 프레임이 있으면 HAPPY, 없으면 IDLE (걷기 프레임으로 제자리걸음 방지)"""
+        self.state = "HAPPY" if self.anim_frames.get("has_happy") else "IDLE"
 
     def enterEvent(self, event):
         self.is_hovered = True
@@ -393,7 +414,14 @@ class PetWidget(QWidget):
         self.dialog_input.popup_near_pet()
 
     def on_user_question(self, user_query):
-        self.state = "IDLE"
+        # 이전 질문 처리 중에 새 스레드로 덮어쓰면 실행 중인 QThread가 해제되며 크래시 → 끝날 때까지 대기
+        if self.llm_worker is not None and self.llm_worker.isRunning():
+            self.speech_bubble.show_message("아직 앞 질문을 생각하고 있어요! 잠시만요~", duration_ms=3000)
+            return
+
+        # think/ 프레임이 있으면 답변이 올 때까지 생각하는 동작
+        self.state = "THINK" if self.anim_frames.get("has_think") else "IDLE"
+        self.current_frame_idx = 0
         self.update_pet_image()
         self.speech_bubble.show_message("생각 중...", duration_ms=10000)
 
@@ -402,6 +430,9 @@ class PetWidget(QWidget):
         self.llm_worker.start()
 
     def _handle_llm_response(self, response_text):
+        if self.state == "THINK":
+            self.state = "IDLE"
+            self.update_pet_image()
         self.speech_bubble.show_message(response_text, duration_ms=7000)
 
     def build_size_menu(self, parent_menu, title_override=""):
@@ -590,6 +621,9 @@ class PetWidget(QWidget):
             folders_to_process.append((folder_id, pet_name.strip()))
 
         if folders_to_process:
+            if getattr(self, "generator_worker", None) is not None and self.generator_worker.isRunning():
+                self.speech_bubble.show_message("이전 펫 정돈 작업이 아직 진행 중이에요!", duration_ms=4000)
+                return
             # 💡 펫이 멈추지 않도록 말풍선을 띄우고 QThread 백그라운드에서 비동기 처리!
             self.speech_bubble.show_message("새 펫 에셋을 예쁘게 정돈하고 있어요! ✂️\n(잠시만 기다려주세요~)", duration_ms=15000)
 
@@ -610,7 +644,7 @@ class PetWidget(QWidget):
             self.speech_bubble.hide_bubble()
 
     def _on_schedule_timer_triggered(self, timer_id, memo):
-        self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
+        self._set_happy_or_idle()
         self.update_pet_image()
         # duration_ms=0: 유저가 클릭으로 확인할 때까지 영구 표시
         display_msg = memo if str(memo).startswith("⏰") else f"⏰ [알림] '{memo}' 시간이 다 되었어요!"
@@ -618,7 +652,7 @@ class PetWidget(QWidget):
 
     def _on_pomodoro_phase_changed(self, phase, msg, cycle_count, remaining_secs):
         if phase == "REST_START":
-            self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
+            self._set_happy_or_idle()
         elif phase == "WORK_START":
             self.state = "IDLE"
         elif phase == "STOPPED":
@@ -629,14 +663,14 @@ class PetWidget(QWidget):
 
     def _on_schedule_reminded(self, sched_id, title, remind_type):
         """10분 전 사전 일정/TODO 알림 발생 시 펫 반응"""
-        self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
+        self._set_happy_or_idle()
         self.update_pet_image()
         self.speech_bubble.show_message(f"⏰ [알림] '{title}' ({remind_type}) (클릭하여 확인)", duration_ms=0)
 
     def _on_briefing_ready(self, briefing_text):
         """아침 브리핑 출력"""
         if briefing_text:
-            self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
+            self._set_happy_or_idle()
             self.update_pet_image()
             self.speech_bubble.show_message(briefing_text, duration_ms=12000)
 
@@ -680,7 +714,7 @@ class PetWidget(QWidget):
         """All-in-Win 자산 요약 말풍선 브리핑"""
         from core.asset_agent import AssetAgent
         summary = AssetAgent.get_asset_summary()
-        self.state = "HAPPY" if "HAPPY" in self.anim_frames and self.anim_frames["HAPPY"] else "IDLE"
+        self._set_happy_or_idle()
         self.update_pet_image()
         self.speech_bubble.show_message(summary, duration_ms=12000)
 

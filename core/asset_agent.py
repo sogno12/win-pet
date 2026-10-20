@@ -4,7 +4,7 @@ import socket
 import subprocess
 import webbrowser
 import time
-from core.config_manager import BASE_DIR
+from core.paths import BASE_DIR
 from core.logger import PetLogger
 
 class AssetAgent:

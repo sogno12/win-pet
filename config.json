@@ -1,12 +1,12 @@
 {
-  "current_pet": "fox_orange",
+  "current_pet": "sirius_black",
   "llm_model": "gemini-3.1-flash-lite",
-  "pet_width": 32,
-  "pet_height": 32,
+  "pet_width": 48,
+  "pet_height": 48,
   "is_always_on_top": true,
   "move_speed": 1,
-  "move_timer_ms": 30,
-  "move_boundary_mode": "CUSTOM",
+  "move_timer_ms": 70,
+  "move_boundary_mode": "MEDIUM",
   "custom_boundary_rect": {
     "x": 641,
     "y": 938,
