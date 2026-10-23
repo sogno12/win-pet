@@ -11,6 +11,11 @@ from core.logger import PetLogger
 
 # 에이전트 키 -> (모듈, 클래스)
 # 실행할 때 import 해서 Qt 객체 생성 시점을 늦추고 순환 import를 피함
+#
+# ⚠️ 주의: 문자열로 동적 import 하므로 PyInstaller가 이 모듈들을 자동으로 찾지 못함.
+#   - 에이전트 모듈은 반드시 core 패키지 안에 둘 것 (build_portable.py의 --collect-submodules=core 로 포함됨)
+#   - core 밖 모듈을 추가해야 하면 build_portable.py에 --hidden-import 를 함께 추가할 것
+#   - build_portable.py의 verify_bundled_modules()가 빌드 후 누락 여부를 검사함
 _AGENTS = {
     "info": ("core.info_agent", "InfoAgent"),
     "pc": ("core.pc_agent", "PCAgent"),

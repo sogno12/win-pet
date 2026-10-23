@@ -45,6 +45,49 @@ def verify_environment():
     print("👉 터미널에서 [ conda activate wincat ] 을 실행하신 후 [ python build_portable.py ]를 다시 실행해 주세요!\n")
     sys.exit(1)
 
+def verify_bundled_modules():
+    """빌드 결과에 core 모듈과 tool_registry 동적 import 대상이 모두 포함됐는지 검사.
+
+    tool_registry는 importlib로 에이전트를 불러오므로 PyInstaller가 놓치면
+    빌드는 성공해도 exe 실행 중에만 'No module named ...' 오류가 난다.
+    하나라도 빠지면 빌드를 실패 처리한다.
+    """
+    import ast
+    import re
+
+    # 1) 필수 모듈 목록: core/*.py 전체 + _AGENTS에 등록된 모듈 (import 없이 소스 파싱)
+    core_dir = os.path.join(BASE_DIR, "core")
+    required = {"core." + f[:-3] for f in os.listdir(core_dir)
+                if f.endswith(".py") and f != "__init__.py"}
+
+    registry_src = open(os.path.join(core_dir, "tool_registry.py"), encoding="utf-8").read()
+    agents = None
+    for node in ast.walk(ast.parse(registry_src)):
+        if isinstance(node, ast.Assign) and any(getattr(t, "id", None) == "_AGENTS" for t in node.targets):
+            agents = ast.literal_eval(node.value)
+    if not agents:
+        print("\n[ERROR] tool_registry.py에서 _AGENTS를 찾지 못해 모듈 포함 여부를 검증할 수 없습니다.")
+        sys.exit(1)
+    required |= {mod for mod, _cls in agents.values()}
+
+    # 2) PyInstaller가 실제로 묶은 모듈 목록 (build/win_pet/PYZ-00.toc)
+    toc_path = os.path.join(BASE_DIR, "build", "win_pet", "PYZ-00.toc")
+    if not os.path.exists(toc_path):
+        print(f"\n[ERROR] {toc_path} 가 없어 모듈 포함 여부를 검증할 수 없습니다.")
+        sys.exit(1)
+    toc_text = open(toc_path, encoding="utf-8", errors="ignore").read()
+    bundled = set(re.findall(r"\(\s*'([\w.]+)'\s*,", toc_text))
+
+    missing = sorted(required - bundled)
+    if missing:
+        print("\n❌ [ERROR] 다음 모듈이 exe에 포함되지 않았습니다 (실행 중 'No module named' 오류 발생):")
+        for m in missing:
+            print(f"   - {m}")
+        print("👉 build_portable.py의 --collect-submodules / --hidden-import 옵션을 확인하세요.")
+        sys.exit(1)
+
+    print(f"[CHECK] 필수 모듈 {len(required)}개 포함 확인 완료 (에이전트: {', '.join(sorted(agents))})")
+
 def build_portable_package():
     """win_pet 무설치 포터블 실행 패키지 빌드"""
     print("\n[BUILD] win_pet 무설치 포터블 실행 패키지 빌드를 시작합니다...")
@@ -66,6 +109,10 @@ def build_portable_package():
         f"--add-data=.env.example{os.path.pathsep}.",
     ]
 
+    core_dir = os.path.join(BASE_DIR, "core")
+    hidden_import_args = [f"--hidden-import=core.{f[:-3]}" for f in sorted(os.listdir(core_dir))
+                          if f.endswith(".py") and f != "__init__.py"]
+
     pyinstaller_cmd = [
         python_exe, "-m", "PyInstaller",
         "--noconsole",
@@ -73,12 +120,18 @@ def build_portable_package():
         "--name=win_pet",
         "--clean",
         "-y",
-    ] + add_data_args + [os.path.join(BASE_DIR, "main.py")]
+        # tool_registry가 importlib로 에이전트를 동적 import 하므로 PyInstaller가 추적 못함 -> core 전체 강제 포함
+        # (core에 __init__.py가 없는 네임스페이스 패키지라 collect-submodules만으로는 불확실 -> 모듈별 hidden-import도 지정)
+        "--collect-submodules=core",
+    ] + hidden_import_args + add_data_args + [os.path.join(BASE_DIR, "main.py")]
 
     print(f"[CMD] PyInstaller 명령어 실행중: {' '.join(pyinstaller_cmd)}\n")
     
     try:
         subprocess.check_call(pyinstaller_cmd, cwd=BASE_DIR)
+
+        # build/ 폴더를 정리하기 전에 모듈 누락 검사 (누락 시 여기서 빌드 중단)
+        verify_bundled_modules()
         
         dist_dir = os.path.join(BASE_DIR, "dist", "win_pet")
         if os.path.exists(dist_dir):

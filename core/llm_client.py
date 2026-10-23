@@ -81,7 +81,7 @@ class LLMClient:
         }
         
         try:
-            res = requests.post(url, headers=headers, json=payload, timeout=15)
+            res = requests.post(url, headers=headers, json=payload, timeout=30)
             if res.status_code == 200:
                 data = res.json()
                 usage = data.get("usageMetadata", {})
@@ -154,7 +154,7 @@ class LLMClient:
                     }
 
                     try:
-                        res2 = requests.post(url, headers=headers, json=pass2_payload, timeout=15)
+                        res2 = requests.post(url, headers=headers, json=pass2_payload, timeout=30)
                         if res2.status_code == 200:
                             data2 = res2.json()
                             usage2 = data2.get("usageMetadata", {})
